@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Mockups de Interface: CLI vs Web UI</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #f8fafc; padding: 24px; margin: 0; }
+    h2 { margin-top: 0; color: #f8fafc; }
+    .subtitle { color: #94a3b8; font-size: 14px; margin-bottom: 24px; }
+    .split { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    @media (max-width: 900px) { .split { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <h2>Comparativo Visual: Opção A (CLI com Rich) vs Opção C (Web UI)</h2>
+  <p class="subtitle">Analise como o avaliador e o usuário final interagiriam com cada uma das interfaces</p>
+
+  <div class="split">
+    
+    <!-- Opção A: CLI Terminal -->
+    <div style="border-radius: 12px; padding: 18px; border: 2px solid #334155; background: #1e293b;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <h3 style="margin: 0; color: #4ade80;">Opção A: CLI Interativa com Rich</h3>
+        <span style="background: rgba(74, 222, 128, 0.15); color: #4ade80; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600;">Recomendada (Zero Atrito)</span>
+      </div>
+      <p style="font-size: 13px; color: #94a3b8; margin-top: 0;">Execução direta no terminal via <code>python main.py</code>, sem abrir portas de rede ou navegadores.</p>
+
+      <!-- Terminal Window Mockup -->
+      <div style="background: #121214; border-radius: 8px; border: 1px solid #27272a; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.5); font-family: 'JetBrains Mono', Courier, monospace; font-size: 12px;">
+        <div style="background: #202024; padding: 8px 12px; display: flex; align-items: center; gap: 6px; border-bottom: 1px solid #27272a;">
+          <span style="width: 10px; height: 10px; border-radius: 50%; background: #ef4444; display: inline-block;"></span>
+          <span style="width: 10px; height: 10px; border-radius: 50%; background: #eab308; display: inline-block;"></span>
+          <span style="width: 10px; height: 10px; border-radius: 50%; background: #22c55e; display: inline-block;"></span>
+          <span style="margin-left: 10px; color: #71717a; font-size: 11px;">bash — emporio-da-musica-agent</span>
+        </div>
+        
+        <div style="padding: 16px; color: #e4e4e7; line-height: 1.5;">
+          <div style="color: #38bdf8; font-weight: bold; margin-bottom: 8px;">
+            ╔════════════════════════════════════════════════════════════╗<br>
+            ║   🎸 EMPÓRIO DA MÚSICA — ASSISTENTE VIRTUAL DE ATENDIMENTO ║<br>
+            ║   Sua música começa aqui • Campo Grande/MS                 ║<br>
+            ╚════════════════════════════════════════════════════════════╝
+          </div>
+          <div style="color: #71717a; margin-bottom: 12px;">Digite sua mensagem ou <code>/export</code> para salvar a conversa, <code>/sair</code> para encerrar.</div>
+          
+          <div style="margin-bottom: 10px;">
+            <span style="color: #c084fc; font-weight: bold;">Você:</span> Olá! Gostaria de um violão clássico até uns R$ 700 para quem está começando.
+          </div>
+          
+          <div style="color: #facc15; margin-bottom: 8px; font-style: italic;">
+            ⚙ [Tool] buscar_produtos(categoria="Violões", preco_maximo=700) → 2 encontrados
+          </div>
+          
+          <div style="background: #18181b; border-left: 3px solid #22c55e; padding: 10px 14px; border-radius: 4px; margin-bottom: 10px;">
+            <div style="color: #22c55e; font-weight: bold; margin-bottom: 4px;">Atendente Empório da Música:</div>
+            <div>E aí! Que massa que você vai começar a tocar. Para quem tá iniciando, separei duas opções bem legais que temos a pronta entrega aqui na loja:</div>
+            <div style="margin-top: 8px; padding-left: 8px; border-left: 2px solid #3f3f46;">
+              • <b>Yamaha C40 Nylon Natural</b> — R$ 599,90 (12 em estoque)<br>
+              <span style="color: #a1a1aa; font-size: 11px;">Tampo em Spruce, excelente projeção e super confortável para estudo.</span><br>
+              • <b>Tagima Memphis AC-39</b> — R$ 429,90 (15 em estoque)<br>
+              <span style="color: #a1a1aa; font-size: 11px;">Corpo leve em Linden, ótimo custo-benefício.</span>
+            </div>
+            <div style="margin-top: 8px; color: #38bdf8; font-size: 11px;">
+              💡 No PIX à vista ainda tem 5% de desconto (o Yamaha sai por R$ 569,90).
+            </div>
+            <div style="margin-top: 6px;">Qual dos dois chamou mais sua atenção? Se quiser saber mais de algum, só falar!</div>
+          </div>
+          
+          <div style="display: flex; gap: 8px; align-items: center; color: #c084fc;">
+            <span style="font-weight: bold;">Você &gt;</span> <span style="background: #22c55e; width: 8px; height: 14px; display: inline-block;"></span>
+          </div>
+        </div>
+      </div>
+      
+      <div style="margin-top: 14px; font-size: 12px; color: #cbd5e1;">
+        <b>Vantagens Técnicas:</b>
+        <ul style="margin: 6px 0 0 16px; padding: 0;">
+          <li>Zero atrito para o avaliador (roda em qualquer terminal com 1 comando)</li>
+          <li>Feedback em tempo real das chamadas de Tools sem poluição</li>
+          <li>Comando nativo <code>/export</code> que já gera os arquivos de casos de teste exigidos</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Opção C: Web UI (Streamlit) -->
+    <div style="border-radius: 12px; padding: 18px; border: 2px solid #334155; background: #1e293b;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <h3 style="margin: 0; color: #38bdf8;">Opção C: Interface Web (Streamlit)</h3>
+        <span style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600;">Visual de App Web</span>
+      </div>
+      <p style="font-size: 13px; color: #94a3b8; margin-top: 0;">Execução via <code>streamlit run app.py</code>, abrindo uma aba interativa no navegador.</p>
+
+      <!-- Browser Window Mockup -->
+      <div style="background: #ffffff; color: #1f2937; border-radius: 8px; border: 1px solid #e5e7eb; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.15); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 12px;">
+        <div style="background: #f3f4f6; padding: 8px 12px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #e5e7eb;">
+          <div style="display: flex; gap: 4px;">
+            <span style="width: 10px; height: 10px; border-radius: 50%; background: #ef4444; display: inline-block;"></span>
+            <span style="width: 10px; height: 10px; border-radius: 50%; background: #eab308; display: inline-block;"></span>
+            <span style="width: 10px; height: 10px; border-radius: 50%; background: #22c55e; display: inline-block;"></span>
+          </div>
+          <div style="background: #ffffff; border: 1px solid #d1d5db; border-radius: 4px; padding: 2px 10px; font-size: 11px; color: #6b7280; width: 100%;">
+            http://localhost:8501 — Empório da Música Chat
+          </div>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 120px 1fr; min-height: 280px;">
+          <!-- Sidebar -->
+          <div style="background: #f9fafb; border-right: 1px solid #e5e7eb; padding: 12px; font-size: 11px;">
+            <div style="font-weight: bold; color: #111827; margin-bottom: 4px;">🎸 Empório</div>
+            <div style="font-size: 10px; color: #6b7280; margin-bottom: 12px;">Campo Grande/MS</div>
+            <div style="font-weight: 600; color: #374151; margin-bottom: 4px;">Status</div>
+            <div style="color: #059669; font-weight: 500; font-size: 10px;">● Aberto agora</div>
+            <div style="color: #6b7280; font-size: 9px; margin-top: 2px;">Seg-Sex: 09h às 18h</div>
+            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 10px 0;">
+            <button style="background: #f3f4f6; border: 1px solid #d1d5db; padding: 4px 6px; border-radius: 4px; font-size: 10px; width: 100%; cursor: pointer;">Limpar Chat</button>
+          </div>
+          
+          <!-- Chat Area -->
+          <div style="padding: 12px; display: flex; flex-direction: column; justify-content: space-between; background: #fafafa;">
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <!-- User bubble -->
+              <div style="align-self: flex-end; background: #2563eb; color: #ffffff; padding: 8px 12px; border-radius: 12px 12px 2px 12px; max-width: 80%; font-size: 11px;">
+                Olá! Gostaria de um violão clássico até uns R$ 700 para quem está começando.
+              </div>
+              
+              <!-- Bot bubble -->
+              <div style="align-self: flex-start; background: #ffffff; border: 1px solid #e5e7eb; color: #1f2937; padding: 8px 12px; border-radius: 12px 12px 12px 2px; max-width: 88%; font-size: 11px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                <div style="font-weight: bold; color: #2563eb; font-size: 10px; margin-bottom: 3px;">Atendente Virtual</div>
+                <div>E aí! Que massa que você vai começar a tocar. Temos duas ótimas opções a pronta entrega:</div>
+                <div style="margin: 6px 0; background: #f3f4f6; padding: 6px; border-radius: 6px; font-size: 10px;">
+                  <b>Yamaha C40</b> — R$ 599,90 (12 em estoque)<br>
+                  <b>Tagima Memphis AC-39</b> — R$ 429,90 (15 em estoque)
+                </div>
+                <div style="font-size: 10px; color: #059669;">💡 5% de desconto à vista via PIX!</div>
+              </div>
+            </div>
+            
+            <!-- Input Bar -->
+            <div style="display: flex; gap: 6px; margin-top: 10px;">
+              <input type="text" placeholder="Digite sua mensagem..." style="flex: 1; padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 11px;">
+              <button style="background: #2563eb; color: white; border: none; border-radius: 6px; padding: 6px 12px; font-size: 11px; cursor: pointer;">Enviar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div style="margin-top: 14px; font-size: 12px; color: #cbd5e1;">
+        <b>Vantagens e Desvantagens:</b>
+        <ul style="margin: 6px 0 0 16px; padding: 0;">
+          <li>Visual familiar de aplicativo de chat web</li>
+          <li>Exige abrir porta local e rodar servidor web na máquina do avaliador</li>
+          <li>O ciclo de re-execução do Streamlit adiciona complexidade de estado</li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>
