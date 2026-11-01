@@ -194,8 +194,10 @@ While this project delivers an immediate, functional MVP satisfying 100% of the 
    - Introduce an abstract base class / protocol allowing seamless hot-swapping between Google Gemini, OpenAI (`gpt-4o-mini`), and **OpenRouter** to dynamically route requests based on cost, token limits, and throughput benchmarks.
 2. **Hybrid Vector Search for Massive Catalogs:**
    - If the catalog scaled from 64 to 100,000+ SKUs, SQLite `LIKE` queries would be replaced with `pgvector` or an embedded vector store (Chroma/Qdrant) combining semantic search with BM25 keyword filtering (Hybrid Search).
-3. **Official WhatsApp Business Cloud API Integration:**
-   - Expose a FastAPI webhook endpoint (`/webhook`) with HMAC signature verification and background task queuing (Celery/Redis) to directly interface with Meta's Graph API.
+3. **Omnichannel Headless Deployment (WhatsApp, Telegram & Embeddable Web Widget):**
+   - Expose a decoupled asynchronous FastAPI service with native webhook connectors for **WhatsApp Business Cloud API** (Meta Graph API with HMAC verification) and **Telegram Bot API**.
+   - Provide an embeddable web chat widget (`<script src="emporio-chat.js">`) with Server-Sent Events (SSE) streaming for third-party e-commerce storefronts.
+   - Unify customer identity across channels (phone, email) against the `customers` database to enable persistent cross-session memory and tailored recommendations.
 4. **Evaluation Harness (LLM-as-a-Judge):**
    - Implement an automated regression test suite using Ragas or DeepEval to score persona tone adherence, tool-calling precision, and hallucination rates across synthetic dialogue batches.
 
