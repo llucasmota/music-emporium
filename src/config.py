@@ -5,7 +5,7 @@ from pydantic import Field
 class Settings(BaseSettings):
     gemini_api_key: str = Field(default="", validation_alias="GEMINI_API_KEY")
     debug_mode: bool = Field(default=False, validation_alias="DEBUG_MODE")
-    model_name: str = "gemini-2.5-flash"
+    model_name: str = Field(default="gemini-3.8-flash", validation_alias="MODEL_NAME")
     
     # Project paths
     project_root: Path = Path(__file__).resolve().parent.parent

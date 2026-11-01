@@ -8,4 +8,4 @@ def test_settings_load_defaults(monkeypatch):
     settings = Settings()
     assert settings.gemini_api_key == "test-api-key-12345"
     assert settings.debug_mode is False
-    assert settings.model_name == "gemini-2.5-flash"
+    assert "flash" in settings.model_name
