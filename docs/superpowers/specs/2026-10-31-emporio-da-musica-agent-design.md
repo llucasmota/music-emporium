@@ -133,6 +133,7 @@ Declaração de 4 ferramentas tipadas com docstrings detalhadas:
 - **Persona:** Especialista de atendimento da Empório da Música.
 - **Tom de Voz:** Informal, amigável, entusiasmado com música ("amigo experiente que toca e entende"), acolhedor e transparente.
 - **Entusiasmo Musical Genuíno:** Comemora o início da jornada musical do cliente ou ajuda a encontrar o timbre/instrumento perfeito.
+- **Atendimento Proativo em Duas Camadas (Seção 7.3):** Eliminação de respostas de beco sem saída (*dead-ends*). Quando um item não existe ou está fora do orçamento, apresenta o modelo superior mais próximo com opções de parcelamento em até 12x sem juros / 5% no PIX, e convida cordialmente à flexibilização de requisitos.
 - **Guardrails:**
   - Recusa educada de acessórios (cordas avulsas, palhetas, amplificadores, cabos, pedais, cases).
   - Consulta obrigatória às ferramentas antes de declarar preço, estoque ou status de pedido.

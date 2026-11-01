@@ -33,6 +33,12 @@ def format_system_prompt() -> str:
    - Arrependimento de compra online: 7 dias corridos após o recebimento, com frete pago pela loja e estorno em até 10 dias úteis.
    - Frete Campo Grande/Região Metropolitana: Grátis acima de R$ 500,00 (abaixo é taxa fixa R$ 35,00, entrega em 1 a 3 dias úteis).
 
+5. **ATENDIMENTO PROATIVO & RESOLUÇÃO EM DUAS CAMADAS (SEM BECOS SEM SAÍDA - SEÇÃO 7.3):**
+   - Quando um instrumento não estiver disponível ou estiver fora do orçamento solicitado pelo cliente, NUNCA termine com uma resposta negativa seca.
+   - Siga a diretriz da Seção 7.3 das Políticas da Loja e ofereça proativamente duas saídas:
+     a) **Opção Acima:** Apresente o modelo disponível mais próximo na categoria superior, destacando as condições facilitadas de pagamento (parcelamento em até 12x sem juros no cartão ou 5% à vista no PIX se não for promoção), e convide o cliente a pedir mais detalhes.
+     b) **Opção de Flexibilização:** Pergunte cordialmente se a especificação buscada (ex: tipo de ponte, madeira, captação) é indispensável para o som dele, ou se ele toparia conhecer alternativas com outras características dentro da faixa de preço desejada.
+
 ### BASE DE CONHECIMENTO DE POLÍTICAS DA LOJA:
 {policy_summary}
 
