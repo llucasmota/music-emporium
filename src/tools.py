@@ -1,11 +1,13 @@
 import sqlite3
 from typing import Any, Callable, Dict, List, Optional
+from langchain_core.tools import tool
 from src.database import query_products, query_product_details, query_order
 from src.knowledge import get_policy_topic, AVAILABLE_POLICY_TOPICS
 
-def create_tool_registry(db_conn: sqlite3.Connection) -> Dict[str, Callable[..., Any]]:
-    """Creates a dictionary of executable tool functions bound to the database connection."""
+def create_langchain_tools(db_conn: sqlite3.Connection) -> List[Any]:
+    """Creates a list of LangChain @tool objects for use with LangGraph."""
 
+    @tool
     def buscar_produtos(
         termo: Optional[str] = None,
         categoria: Optional[str] = None,
@@ -27,6 +29,7 @@ def create_tool_registry(db_conn: sqlite3.Connection) -> Dict[str, Callable[...,
             "produtos": results
         }
 
+    @tool
     def consultar_detalhes_produto(nome_ou_id: str) -> Dict[str, Any]:
         """Retorna a ficha técnica completa e detalhes de especificações de um instrumento musical.
         
@@ -41,6 +44,7 @@ def create_tool_registry(db_conn: sqlite3.Connection) -> Dict[str, Callable[...,
             return {"status": "not_found", "mensagem": f"Nenhum instrumento encontrado com o nome ou ID '{nome_ou_id}'."}
         return {"status": "success", "produto": res}
 
+    @tool
     def consultar_pedido(
         numero_pedido: Optional[int] = None,
         termo_cliente: Optional[str] = None
@@ -59,6 +63,7 @@ def create_tool_registry(db_conn: sqlite3.Connection) -> Dict[str, Callable[...,
             return {"status": "not_found", "mensagem": "Nenhum pedido localizado com os dados informados."}
         return {"status": "success", "pedido": res}
 
+    @tool
     def consultar_politicas(topico: str) -> str:
         """Consulta o manual de políticas oficiais da Empório da Música para tirar dúvidas de clientes.
         
@@ -70,9 +75,15 @@ def create_tool_registry(db_conn: sqlite3.Connection) -> Dict[str, Callable[...,
         """
         return get_policy_topic(topico)
 
-    return {
-        "buscar_produtos": buscar_produtos,
-        "consultar_detalhes_produto": consultar_detalhes_produto,
-        "consultar_pedido": consultar_pedido,
-        "consultar_politicas": consultar_politicas
-    }
+    return [buscar_produtos, consultar_detalhes_produto, consultar_pedido, consultar_politicas]
+
+def create_tool_registry(db_conn: sqlite3.Connection) -> Dict[str, Callable[..., Any]]:
+    """Creates a dictionary of callable tool functions for direct invocation or testing."""
+    lc_tools = create_langchain_tools(db_conn)
+    registry = {}
+    for t in lc_tools:
+        # Wrap tool invoke so direct calling func(**kwargs) works identically
+        def make_wrapper(tool_obj):
+            return lambda **kwargs: tool_obj.invoke(kwargs)
+        registry[t.name] = make_wrapper(t)
+    return registry

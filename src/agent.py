@@ -1,122 +1,93 @@
+import uuid
 import logging
 from typing import Any, Dict, List, Optional
-from google import genai
-from google.genai import types
+from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langgraph.graph import StateGraph, MessagesState, START, END
+from langgraph.prebuilt import ToolNode, tools_condition
+from langgraph.checkpoint.memory import MemorySaver
+
 from src.config import settings
 from src.database import init_database
-from src.tools import create_tool_registry
+from src.tools import create_langchain_tools
 from src.prompt import format_system_prompt
 
 logger = logging.getLogger("music_emporium")
 
 class MusicStoreAgent:
-    """Core intelligent agent orchestrating the conversational loop with Google Gemini."""
+    """Intelligent customer service agent orchestrated by LangGraph StateGraph with Google Gemini."""
 
     def __init__(self, db_conn=None, api_key: Optional[str] = None):
         self.api_key = api_key or settings.gemini_api_key
         self.db_conn = db_conn or init_database()
-        self.tool_registry = create_tool_registry(self.db_conn)
+        self.tools = create_langchain_tools(self.db_conn)
         self.system_prompt = format_system_prompt()
+        self.thread_id = str(uuid.uuid4())
+        self.memory = MemorySaver()
         self.history: List[Dict[str, Any]] = []
-        
-        # Tools list for Gemini client
-        self.tools = list(self.tool_registry.values())
 
         if self.api_key and self.api_key != "fake-key":
-            self.client = genai.Client(api_key=self.api_key)
+            self.llm = ChatGoogleGenerativeAI(
+                model=settings.model_name,
+                google_api_key=self.api_key,
+                temperature=0.4,
+            )
+            self.model_with_tools = self.llm.bind_tools(self.tools)
+            self.graph = self._build_graph()
         else:
-            self.client = None
+            self.llm = None
+            self.graph = None
+
+    def _build_graph(self):
+        """Constructs the LangGraph StateGraph: START -> agent -> tools_condition -> tools -> agent -> END."""
+        def call_model(state: MessagesState):
+            messages = [SystemMessage(content=self.system_prompt)] + state["messages"]
+            response = self.model_with_tools.invoke(messages)
+            return {"messages": [response]}
+
+        workflow = StateGraph(MessagesState)
+        workflow.add_node("agent", call_model)
+        workflow.add_node("tools", ToolNode(self.tools))
+
+        workflow.add_edge(START, "agent")
+        workflow.add_conditional_edges("agent", tools_condition)
+        workflow.add_edge("tools", "agent")
+
+        return workflow.compile(checkpointer=self.memory)
 
     def reset_history(self) -> None:
-        """Clears the conversational memory."""
+        """Clears the conversational memory and starts a new thread."""
         self.history = []
+        self.thread_id = str(uuid.uuid4())
 
     def get_history(self) -> List[Dict[str, Any]]:
         """Returns the current conversation message history."""
         return self.history
 
     def chat(self, user_message: str) -> str:
-        """Processes a customer message through the Gemini model with native tool-calling."""
-        if not self.client:
+        """Processes a customer message through the LangGraph agent graph."""
+        if not self.graph:
             if settings.debug_mode:
                 return "DEBUG ERROR: GEMINI_API_KEY não configurada no ambiente."
             return "Putz, arrebentou uma corda da guitarra aqui no meio do solo! 🎸 Estamos sem conexão com o sistema no momento. Por favor, verifique sua GEMINI_API_KEY no arquivo .env!"
 
-        # Record user message in memory
+        # Record user message
         self.history.append({"role": "user", "content": user_message})
 
         try:
-            # Build conversation contents for the Gemini API
-            contents = []
-            for msg in self.history:
-                role = "user" if msg["role"] == "user" else "model"
-                contents.append(types.Content(
-                    role=role,
-                    parts=[types.Part.from_text(text=msg["content"])]
-                ))
+            config = {"configurable": {"thread_id": self.thread_id}}
+            inputs = {"messages": [HumanMessage(content=user_message)]}
 
-            config = types.GenerateContentConfig(
-                system_instruction=self.system_prompt,
-                tools=self.tools,
-                temperature=0.4,
-            )
+            output = self.graph.invoke(inputs, config=config)
+            final_message = output["messages"][-1]
+            reply_text = final_message.content
 
-            # Execution loop for tool calls
-            max_iterations = 5
-            iteration = 0
-            
-            while iteration < max_iterations:
-                iteration += 1
-                response = self.client.models.generate_content(
-                    model=settings.model_name,
-                    contents=contents,
-                    config=config,
-                )
+            if isinstance(reply_text, list):
+                # If multimodal or structured parts
+                reply_text = "".join([str(p.get("text", p)) if isinstance(p, dict) else str(p) for p in reply_text])
 
-                if not response.candidates:
-                    break
-
-                candidate = response.candidates[0]
-                model_content = candidate.content
-                contents.append(model_content)
-
-                # Check if model requested function calls
-                function_calls = [p.function_call for p in model_content.parts if p.function_call]
-                if not function_calls:
-                    # Final text response
-                    reply_text = "".join([p.text for p in model_content.parts if p.text])
-                    self.history.append({"role": "assistant", "content": reply_text})
-                    return reply_text
-
-                # Execute requested functions
-                tool_response_parts = []
-                for fc in function_calls:
-                    fn_name = fc.name
-                    fn_args = dict(fc.args) if fc.args else {}
-                    
-                    if settings.debug_mode:
-                        logger.info(f"⚙ Executando tool: {fn_name}({fn_args})")
-                    
-                    if fn_name in self.tool_registry:
-                        fn = self.tool_registry[fn_name]
-                        result = fn(**fn_args)
-                    else:
-                        result = {"error": f"Tool '{fn_name}' não encontrada."}
-
-                    tool_response_parts.append(types.Part.from_function_response(
-                        name=fn_name,
-                        response={"result": result}
-                    ))
-
-                # Feed function results back to the conversation
-                contents.append(types.Content(
-                    role="tool",
-                    parts=tool_response_parts
-                ))
-
-            fallback_msg = "Desculpe, precisei fazer muitas consultas ao sistema e não consegui concluir. Pode reformular sua dúvida?"
-            self.history.append({"role": "assistant", "content": fallback_msg})
-            return fallback_msg
+            self.history.append({"role": "assistant", "content": reply_text})
+            return reply_text
 
         except Exception as e:
             if settings.debug_mode:

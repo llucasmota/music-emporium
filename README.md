@@ -5,7 +5,7 @@
 > **Repository:** [https://github.com/lucasmota/music-emporium](https://github.com/lucasmota/music-emporium) (Public Repository)
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Framework: LangGraph](https://img.shields.io/badge/Orchestration-LangGraph-orange.svg)](https://langchain-ai.github.io/langgraph/)
 [![Model: Gemini 2.5 Flash](https://img.shields.io/badge/LLM-Gemini%202.5%20Flash-4285F4.svg)](https://aistudio.google.com/)
 [![Tests: Pytest](https://img.shields.io/badge/Tests-100%25%20Passing-success.svg)](https://docs.pytest.org/)
 [![UI: Rich & Streamlit](https://img.shields.io/badge/UI-CLI%20%2B%20Streamlit-FF4B4B.svg)](https://streamlit.io/)
@@ -63,7 +63,7 @@ This project delivers an autonomous, production-grade **AI Customer Service Agen
 | :--- | :--- | :--- |
 | **Language** | **Python 3.11+** | Required by Artefact. Implemented with modern static typing, Pydantic configuration schemas, and clean packaging. |
 | **LLM Provider & Model** | **Google Gemini (`gemini-2.5-flash`)** via official `google-genai` SDK | Minimizes behavioral stochasticity by relying on a single, thoroughly-tested foundation model; ultra-low latency; native tool-calling capabilities; frictionless evaluation (free API keys in 60s without credit cards). |
-| **Agent Orchestration** | **Native Tool-Calling Loop (ReAct)** | Follows the edital guideline *"solve it in the simplest way possible"*. Eliminates the fragile black-box overhead of heavy agent frameworks (such as LangChain/LangGraph) while retaining 100% code explainability and auditable memory. |
+| **Agent Orchestration** | **LangGraph StateGraph (`langgraph`)** | Directly aligns with Artefact's core stack. StateGraph with `ToolNode` to isolate SQLite and policy tools, conditional routing via `tools_condition`, and thread checkpointing using `MemorySaver`. |
 | **Data Layer** | **SQLite In-Memory (`sqlite3` built-in)** | Zero heavyweight dependencies (avoids pandas bloat); sub-millisecond startup ingestion; supports relational JOINs across customers, orders, items, and promotions; parameterized queries eliminate SQL injection risks. |
 | **Store Policies (PDF)** | **In-Context Structured Knowledge + Topic Retrieval Tool** | For an 8-page manual (~2,500 words / ~3,000 tokens), setting up a Vector Database (ChromaDB/FAISS) with embeddings is classic **over-engineering**. The structured in-context approach eliminates chunk fragmentation, reduces latency, and guarantees 100% legal precision. |
 | **Interface Strategy** | **Dual Mode: CLI (Rich) + Web UI (Streamlit)** | Solves both evaluation and product needs: developer-friendly instant CLI execution (`main.py`) with `/export` command, alongside a visual WhatsApp-like experience (`app.py`) for non-technical business stakeholders. |
