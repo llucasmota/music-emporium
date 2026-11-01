@@ -39,3 +39,9 @@ htmlcov/
 .idea/
 .vscode/
 *.swp
+
+# Personal Study & Interview Preparation Notes (Candidate only, excluded from submission)
+interview_prep/
+interview_prep.md
+.study_notes/
+
