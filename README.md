@@ -2,12 +2,12 @@
 
 > **Artefact Technical Assessment — AI Engineer (Full-Stack para Aplicações com IA Generativa)**  
 > **Candidate:** Lucas Mota  
-> **Repository:** [https://github.com/lucasmota/music-emporium](https://github.com/lucasmota/music-emporium) (Public Repository)
+> **Repository:** [https://github.com/llucasmota/music-emporium](https://github.com/llucasmota/music-emporium) (Public Repository)
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![Framework: LangGraph](https://img.shields.io/badge/Orchestration-LangGraph-orange.svg)](https://langchain-ai.github.io/langgraph/)
-[![Model: Gemini 2.5 Flash](https://img.shields.io/badge/LLM-Gemini%202.5%20Flash-4285F4.svg)](https://aistudio.google.com/)
-[![Tests: Pytest](https://img.shields.io/badge/Tests-100%25%20Passing-success.svg)](https://docs.pytest.org/)
+[![Model: Gemini 3.5 Flash-Lite](https://img.shields.io/badge/LLM-Gemini%203.5%20Flash--Lite-4285F4.svg)](https://aistudio.google.com/)
+[![Tests: Pytest](https://img.shields.io/badge/Tests-16%2F16%20Passing-success.svg)](https://docs.pytest.org/)
 [![UI: Rich & Streamlit](https://img.shields.io/badge/UI-CLI%20%2B%20Streamlit-FF4B4B.svg)](https://streamlit.io/)
 
 ---
@@ -35,9 +35,9 @@ This project delivers an autonomous, production-grade **AI Customer Service Agen
                                                             ▼
                                ┌──────────────────────────────────────────────────────────┐
                                │           MusicStoreAgent (`src/agent.py`)               │
-                               │  - Session Conversational Memory                         │
+                               │  - LangGraph StateGraph & Checkpointing Memory           │
                                │  - Musical Empathy & Guardrails (`src/prompt.py`)        │
-                               │  - Native Tool-Calling Loop (`google-genai` SDK)         │
+                               │  - ReAct ToolNode with SQLite & Policies                 │
                                └────────────────────────────┬─────────────────────────────┘
                                                             │ Typed Function Calls
                                ┌────────────────────────────┴─────────────────────────────┐
@@ -62,7 +62,7 @@ This project delivers an autonomous, production-grade **AI Customer Service Agen
 | Architectural Decision | Chosen Implementation | Justification & Rationale |
 | :--- | :--- | :--- |
 | **Language** | **Python 3.11+** | Required by Artefact. Implemented with modern static typing, Pydantic configuration schemas, and clean packaging. |
-| **LLM Provider & Model** | **Google Gemini (`gemini-2.5-flash`)** via official `google-genai` SDK | Minimizes behavioral stochasticity by relying on a single, thoroughly-tested foundation model; ultra-low latency; native tool-calling capabilities; frictionless evaluation (free API keys in 60s without credit cards). |
+| **LLM Provider & Model** | **Google Gemini (`gemini-3.5-flash-lite`)** via `langchain-google-genai` | Ultra-low latency (~1.0s raw, ~4.5s full LangGraph ReAct loop with tools), zero quota throttling on free tier, high accuracy on tool arguments, and cost-effective production scaling. |
 | **Agent Orchestration** | **LangGraph StateGraph (`langgraph`)** | Directly aligns with Artefact's core stack. StateGraph with `ToolNode` to isolate SQLite and policy tools, conditional routing via `tools_condition`, and thread checkpointing using `MemorySaver`. |
 | **Data Layer** | **SQLite In-Memory (`sqlite3` built-in)** | Zero heavyweight dependencies (avoids pandas bloat); sub-millisecond startup ingestion; supports relational JOINs across customers, orders, items, and promotions; parameterized queries eliminate SQL injection risks. |
 | **Store Policies (PDF)** | **In-Context Structured Knowledge + Topic Retrieval Tool** | For an 8-page manual (~2,500 words / ~3,000 tokens), setting up a Vector Database (ChromaDB/FAISS) with embeddings is classic **over-engineering**. The structured in-context approach eliminates chunk fragmentation, reduces latency, and guarantees 100% legal precision. |
@@ -72,38 +72,106 @@ This project delivers an autonomous, production-grade **AI Customer Service Agen
 
 ## 4. Getting Started & Running the Project
 
-### 4.1 Prerequisites
-- **Python 3.11** or higher.
-- A free **Google Gemini API Key** (obtain in 60 seconds from [Google AI Studio](https://aistudio.google.com/)).
+### 4.1 System Prerequisites & Python Installation Guide
 
-### 4.2 Installation
+This project requires **Python 3.11** or higher (tested across Python 3.11, 3.12, 3.13, and 3.14). If Python is not yet installed on your system, please follow the operating system instructions below:
+
+#### 🪟 Windows Installation Guide
+1. **Download:** Visit the official [Python Downloads for Windows](https://www.python.org/downloads/windows/) and download the latest stable installer (Python 3.11+).
+2. **Install (Crucial Step):** Run the downloaded `.exe` installer. On the very first screen, **check the box: `"Add python.exe to PATH"`** before clicking *"Install Now"*.
+3. **Verify:** Open **PowerShell** or **Command Prompt** and run:
+   ```powershell
+   python --version
+   pip --version
+   ```
+4. *(Optional PowerShell Policy):* If PowerShell displays an execution policy restriction when activating `.venv`, run PowerShell as Administrator and execute:
+   ```powershell
+   Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+   ```
+
+#### 🍏 macOS Installation Guide
+1. **Option A — Homebrew (Recommended):**
+   Open Terminal and install Python 3.12:
+   ```bash
+   brew install python@3.12
+   ```
+2. **Option B — Official Universal Installer:**
+   Download the macOS 64-bit universal installer from [Python Downloads for macOS](https://www.python.org/downloads/macos/). Run the package and double-click `Install Certificates.command` in `/Applications/Python 3.x/` upon completion.
+3. **Verify:**
+   ```bash
+   python3 --version
+   pip3 --version
+   ```
+
+#### 🐧 Linux Installation Guide (Ubuntu / Debian / Fedora / Arch)
+1. **Ubuntu / Debian / Linux Mint:**
+   ```bash
+   sudo apt update
+   sudo apt install -y python3 python3-pip python3-venv
+   ```
+2. **Fedora / RHEL:**
+   ```bash
+   sudo dnf install -y python3 python3-pip
+   ```
+3. **Arch Linux / Manjaro:**
+   ```bash
+   sudo pacman -S python python-pip
+   ```
+4. **Verify:**
+   ```bash
+   python3 --version
+   ```
+
+---
+
+### 4.2 Project Setup & Virtual Environment
+
+Once Python is installed, clone the repository and configure an isolated virtual environment:
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/lucasmota/music-emporium.git
+git clone https://github.com/llucasmota/music-emporium.git
 cd music-emporium
 
-# 2. Create and activate a virtual environment
+# 2. Create the virtual environment
+# On macOS / Linux:
 python3 -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
-# 3. Install dependencies
+# On Windows:
+python -m venv .venv
+
+# 3. Activate the virtual environment
+# On macOS / Linux:
+source .venv/bin/activate
+
+# On Windows (Command Prompt):
+.venv\Scripts\activate.bat
+
+# On Windows (PowerShell):
+.venv\Scripts\Activate.ps1
+
+# 4. Upgrade pip and install dependencies
+pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-### 4.3 Environment Configuration
+### 4.3 Environment Configuration (`.env`)
 
-Copy the sample environment file and add your Gemini API Key:
+1. Obtain a free **Google Gemini API Key** from [Google AI Studio](https://aistudio.google.com/) (ready in 60s, no credit card required).
+2. Copy the sample environment file:
+   ```bash
+   # On macOS / Linux:
+   cp .env.example .env
 
-```bash
-cp .env.example .env
-```
-
-Edit `.env`:
-```bash
-GEMINI_API_KEY=your_actual_gemini_api_key_here
-DEBUG_MODE=false
-```
+   # On Windows (CMD / PowerShell):
+   copy .env.example .env
+   ```
+3. Edit `.env` with your API key:
+   ```bash
+   GEMINI_API_KEY=your_actual_gemini_api_key_here
+   MODEL_NAME=gemini-3.5-flash-lite
+   DEBUG_MODE=false
+   ```
 
 ---
 
@@ -123,9 +191,9 @@ python main.py
 - `/reset`: Clears session conversational memory.
 - `/sair`: Exits the program.
 
-### Option B: Web UI (Streamlit Chat)
+### Option B: Web UI (Streamlit Chat with Musical Animation)
 
-Launch the WhatsApp-styled web application:
+Launch the WhatsApp-styled web application featuring real-time musical equalizer animations:
 
 ```bash
 streamlit run app.py
@@ -136,7 +204,7 @@ streamlit run app.py
 
 ## 6. Running Automated Tests
 
-The test suite covers configuration, SQLite ingestion, catalog filtering, orders joins, policy extraction, and agent state management:
+The test suite covers configuration, SQLite ingestion, catalog filtering, orders joins, policy extraction, prompt constraints, and agent state management:
 
 ```bash
 pytest -v
@@ -144,32 +212,37 @@ pytest -v
 
 Expected output:
 ```text
-tests/test_config.py::test_settings_load_defaults PASSED                 [ 8%]
-tests/test_database.py::test_query_products_with_price_limit PASSED      [16%]
-tests/test_database.py::test_query_product_details PASSED                [25%]
-tests/test_database.py::test_query_order_by_id PASSED                    [33%]
-tests/test_database.py::test_query_order_by_customer_name PASSED         [41%]
-tests/test_knowledge.py::test_available_topics PASSED                    [50%]
-tests/test_knowledge.py::test_get_policy_returns_accurate_terms PASSED   [58%]
-tests/test_knowledge.py::test_store_summary_includes_crucial_guardrails PASSED [66%]
-tests/test_tools.py::test_buscar_produtos_tool PASSED                    [75%]
-tests/test_tools.py::test_consultar_detalhes_produto_tool PASSED         [83%]
-tests/test_tools.py::test_consultar_pedido_tool PASSED                   [91%]
+tests/test_agent.py::test_agent_initialization PASSED                    [  6%]
+tests/test_agent.py::test_agent_history_reset PASSED                     [ 12%]
+tests/test_agent.py::test_agent_export_markdown PASSED                   [ 18%]
+tests/test_config.py::test_settings_load_defaults PASSED                 [ 25%]
+tests/test_database.py::test_query_products_with_price_limit PASSED      [ 31%]
+tests/test_database.py::test_query_product_details PASSED                [ 37%]
+tests/test_database.py::test_query_order_by_id PASSED                    [ 43%]
+tests/test_database.py::test_query_order_by_customer_name PASSED         [ 50%]
+tests/test_knowledge.py::test_available_topics PASSED                    [ 56%]
+tests/test_knowledge.py::test_get_policy_returns_accurate_terms PASSED   [ 62%]
+tests/test_knowledge.py::test_store_summary_includes_crucial_guardrails PASSED [ 68%]
+tests/test_prompt.py::test_system_prompt_contains_crucial_elements PASSED [ 75%]
+tests/test_tools.py::test_buscar_produtos_tool PASSED                    [ 81%]
+tests/test_tools.py::test_consultar_detalhes_produto_tool PASSED         [ 87%]
+tests/test_tools.py::test_consultar_pedido_tool PASSED                   [ 93%]
 tests/test_tools.py::test_consultar_politicas_tool PASSED                [100%]
-============================== 12 passed in 1.45s ==============================
+============================== 16 passed in 0.50s ==============================
 ```
 
 ---
 
 ## 7. Example Interactions
 
-The repository contains 5 recorded end-to-end interactions covering both standard and non-trivial complex scenarios:
+The repository contains 6 recorded end-to-end interactions covering both standard and non-trivial complex scenarios:
 
 1. 📄 [`examples/01_consulta_catalogo.md`](examples/01_consulta_catalogo.md): Acoustic guitars under R$ 1,000, stock checks, and calculation of the 5% PIX discount on non-promotional items.
 2. 📄 [`examples/02_informacoes_loja_e_horarios.md`](examples/02_informacoes_loja_e_horarios.md): Physical store location, phone numbers, and weekend/holiday out-of-hours response handling.
 3. 📄 [`examples/03_status_e_rastreio_pedido.md`](examples/03_status_e_rastreio_pedido.md): Real-time order lookup (Order #4) fetching tracking code, delivery status, and warranty explanation.
 4. 📄 [`examples/04_fora_de_escopo_acessorios.md`](examples/04_fora_de_escopo_acessorios.md): Inquiries for strings, picks, pedals, and amps; demonstration of firm scope boundaries and polite referral to local partners.
 5. 📄 [`examples/05_cenario_nao_trivial_hibrido.md`](examples/05_cenario_nao_trivial_hibrido.md): **Non-trivial scenario**: Customer requesting return of an online purchase under the 7-day repentance clause (free return shipping, 10-day refund) while simultaneously checking live stock and price for a higher-tier Takamine GD20 guitar to perform an exchange with price difference adjustment.
+6. 📄 [`examples/06_interacao_real_guitarras_e_politicas.md`](examples/06_interacao_real_guitarras_e_politicas.md): **Real interactive evaluation dialogue**: Out-of-budget Floyd Rose search resolved via proactive two-tier suggestions, Fender Telecaster Player Series technical specs (vintage string-through fixed bridge), free shipping rules for Campo Grande, and detailed PIX 5% cash discount vs. 12x interest-free installments.
 
 ---
 
@@ -218,7 +291,7 @@ music-emporium/
 │   ├── tools.py                         # Typed agent tool declarations
 │   ├── prompt.py                        # System prompt with musical persona & guardrails
 │   └── agent.py                         # Decoupled MusicStoreAgent engine
-├── examples/                            # 5 real interaction logs (.md)
+├── examples/                            # 6 real interaction logs (.md)
 ├── mockups/                             # Visual brainstorming mockups (HTML)
 ├── tests/                               # Comprehensive Pytest test suite
 │   ├── test_config.py

@@ -1,4 +1,4 @@
-# Exemplo de Interação: conversa_exportada
+# Exemplo de Interação 06: Consulta de Guitarras, Ponte Vintage e Políticas de Frete/PIX
 
 **Cliente:**
 Olá, me chamo Lucas. Teria uma boa guitarra com Floyd Rose até 4000 reais?
