@@ -36,7 +36,13 @@ A **Empório da Música** é uma loja especializada em instrumentos musicais loc
 
 ## 3. Arquitetura do Sistema e Fluxo de Dados
 
-### 3.1 Diagrama de Arquitetura
+### 3.1 Diagrama de Arquitetura & Domínios de Atuação
+
+O agente é projetado para atuar sobre **4 Domínios Especializados de Negócio**:
+1. **Domínio de Catálogo & Estoque:** Busca de instrumentos, filtragem por categoria/preço, ficha técnica detalhada (`specs` em JSON) e disponibilidade de estoque em tempo real.
+2. **Domínio de Pedidos & Rastreamento:** Consulta de status de compras, código de envio dos Correios/Jadlog, prazos de entrega e relação de itens adquiridos.
+3. **Domínio de Políticas & Direitos do Consumidor:** Regras normativas de devolução em 7 dias (CDC), trocas por defeito, prazos de garantia, cálculo de frete para Campo Grande e condições de parcelamento/PIX.
+4. **Domínio de Guardrails & Escopo:** Filtro de negócio determinístico que bloqueia pedidos de acessórios (cabos, palhetas, amplificadores, pedais), redirecionando para lojas parceiras.
 
 ```
                      ┌──────────────────────────────────────────────┐
@@ -46,21 +52,20 @@ A **Empório da Música** é uma loja especializada em instrumentos musicais loc
                                             │ Mensagem do Usuário
                                             ▼
                      ┌──────────────────────────────────────────────┐
-                     │      MusicStoreAgent (src/agent.py)          │
-                     │  - Gerenciamento de Histórico (Memória)      │
+                     │    MusicStoreAgent (LangGraph StateGraph)    │
+                     │  - Gerenciamento de Memória (MemorySaver)    │
                      │  - System Prompt com Persona & Guardrails    │
-                     │  - Loop de Execução de Tools (google-genai)  │
+                     │  - Roteamento Condicional (tools_condition)  │
                      └──────────────┬───────────────────────────────┘
-                                    │ Tool Calls
-                    ┌───────────────┴───────────────┐
-                    ▼                               ▼
-       ┌─────────────────────────┐     ┌─────────────────────────┐
-       │   database.py (SQLite)  │     │   knowledge.py (PDF)    │
-       │ - buscar_produtos       │     │ - consultar_politicas   │
-       │ - consultar_detalhes    │     │   (trocas, devoluções,  │
-       │ - consultar_pedido      │     │    fretes, pagamentos,  │
-       │ (Dados de CSVs)         │     │    garantias, horários) │
-       └─────────────────────────┘     └─────────────────────────┘
+                                    │ ToolNode (Execução de Tools)
+       ┌────────────────────────────┼────────────────────────────┐
+       ▼                            ▼                            ▼
+┌─────────────────────────┐  ┌─────────────────────────┐  ┌─────────────────────────┐
+│  Domínio de Catálogo    │  │  Domínio de Pedidos      │  │  Domínio de Políticas   │
+│ - buscar_produtos       │  │ - consultar_pedido       │  │ - consultar_politicas   │
+│ - consultar_detalhes    │  │   (Rastreio, status,     │  │   (Trocas, frete, CDC,  │
+│   (SQLite: produtos)    │  │    itens comprados)      │  │    horários, pagamentos)│
+└─────────────────────────┘  └─────────────────────────┘  └─────────────────────────┘
 ```
 
 ### 3.2 Estrutura de Diretórios
