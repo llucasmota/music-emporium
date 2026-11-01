@@ -22,6 +22,87 @@ st.markdown("""
         font-size: 0.8rem;
         font-weight: 600;
     }
+
+    /* Musical Loading Animation */
+    .music-loader-box {
+        display: inline-flex;
+        align-items: center;
+        gap: 14px;
+        padding: 10px 18px;
+        border-radius: 12px;
+        background: rgba(46, 125, 50, 0.08);
+        border: 1px solid rgba(46, 125, 50, 0.3);
+        margin: 6px 0;
+        animation: fadeIn 0.3s ease-in;
+    }
+
+    .equalizer {
+        display: flex;
+        align-items: flex-end;
+        gap: 4px;
+        height: 24px;
+    }
+
+    .eq-bar {
+        width: 4px;
+        background: linear-gradient(180deg, #81c784 0%, #2e7d32 100%);
+        border-radius: 3px;
+        animation: bounceBar 0.9s infinite ease-in-out alternate;
+    }
+
+    .bar1 { height: 8px; animation-delay: 0.1s; }
+    .bar2 { height: 18px; animation-delay: 0.35s; }
+    .bar3 { height: 24px; animation-delay: 0.15s; }
+    .bar4 { height: 14px; animation-delay: 0.45s; }
+    .bar5 { height: 20px; animation-delay: 0.25s; }
+
+    @keyframes bounceBar {
+        0% { height: 6px; }
+        100% { height: 24px; }
+    }
+
+    .loader-label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.92rem;
+        font-weight: 500;
+    }
+
+    .guitar-icon {
+        display: inline-block;
+        font-size: 1.1rem;
+        animation: rockGuitar 0.7s infinite ease-in-out alternate;
+        transform-origin: bottom center;
+    }
+
+    @keyframes rockGuitar {
+        0% { transform: rotate(-10deg) scale(0.95); }
+        100% { transform: rotate(12deg) scale(1.05); }
+    }
+
+    .note {
+        display: inline-block;
+        font-size: 1.1rem;
+        color: #2e7d32;
+        font-weight: bold;
+        animation: floatNote 1.4s infinite ease-in-out;
+        opacity: 0;
+    }
+
+    .note-1 { animation-delay: 0.1s; }
+    .note-2 { animation-delay: 0.6s; }
+
+    @keyframes floatNote {
+        0% { transform: translateY(4px) scale(0.8); opacity: 0; }
+        50% { opacity: 0.95; }
+        100% { transform: translateY(-14px) scale(1.15); opacity: 0; }
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(4px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -71,7 +152,25 @@ if prompt := st.chat_input("Digite sua dúvida ou o instrumento que procura...")
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
-        with st.spinner("Consultando instrumentos e políticas da loja..."):
-            reply = st.session_state.agent.chat(prompt)
-            st.markdown(reply)
-            st.session_state.messages.append({"role": "assistant", "content": reply})
+        message_placeholder = st.empty()
+        message_placeholder.markdown("""
+        <div class="music-loader-box">
+            <div class="equalizer">
+                <span class="eq-bar bar1"></span>
+                <span class="eq-bar bar2"></span>
+                <span class="eq-bar bar3"></span>
+                <span class="eq-bar bar4"></span>
+                <span class="eq-bar bar5"></span>
+            </div>
+            <div class="loader-label">
+                <span class="guitar-icon">🎸</span>
+                <span>Afinando os instrumentos e consultando o estoque...</span>
+                <span class="note note-1">♪</span>
+                <span class="note note-2">♫</span>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        reply = st.session_state.agent.chat(prompt)
+        message_placeholder.markdown(reply)
+        st.session_state.messages.append({"role": "assistant", "content": reply})
