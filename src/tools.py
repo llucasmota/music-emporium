@@ -24,6 +24,16 @@ def create_langchain_tools(db_conn: sqlite3.Connection) -> List[Any]:
             Dicionário com a lista de instrumentos encontrados, seus preços reais, descontos de promoção ativos e estoque.
         """
         results = query_products(db_conn, search_term=termo, category=categoria, max_price=preco_maximo)
+        if len(results) == 0 and preco_maximo is not None:
+            # Provide available products without price filter so the agent never hallucinates models
+            alternatives = query_products(db_conn, search_term=termo, category=categoria)
+            return {
+                "total_encontrados": 0,
+                "produtos": [],
+                "mensagem": f"Nenhum produto encontrado com preço até R$ {preco_maximo:.2f}.",
+                "alternativas_em_estoque": alternatives
+            }
+
         return {
             "total_encontrados": len(results),
             "produtos": results

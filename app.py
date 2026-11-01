@@ -1,3 +1,6 @@
+import warnings
+warnings.filterwarnings("ignore")
+
 import streamlit as st
 from src.agent import MusicStoreAgent
 from src.config import settings

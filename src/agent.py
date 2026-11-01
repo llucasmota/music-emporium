@@ -30,7 +30,6 @@ class MusicStoreAgent:
             self.llm = ChatGoogleGenerativeAI(
                 model=settings.model_name,
                 google_api_key=self.api_key,
-                temperature=0.4,
             )
             self.model_with_tools = self.llm.bind_tools(self.tools)
             self.graph = self._build_graph()
