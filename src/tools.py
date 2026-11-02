@@ -29,11 +29,12 @@ def create_langchain_tools(db_conn: sqlite3.Connection) -> List[Any]:
         if total_found == 0 and preco_maximo is not None:
             # Provide available products without price filter so the agent never hallucinates models
             alternatives = query_products(db_conn, search_term=termo, category=categoria)
+            active_alternatives = [p for p in alternatives if p.get("status") == "active"]
             return {
                 "total_encontrados": 0,
                 "produtos": [],
                 "mensagem": f"Nenhum produto encontrado com preço até R$ {preco_maximo:.2f}.",
-                "alternativas_em_estoque": alternatives
+                "alternativas_em_estoque": active_alternatives
             }
 
         return {

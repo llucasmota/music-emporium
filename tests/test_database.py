@@ -149,3 +149,19 @@ def test_c4_real_total_count(db):
     assert len(res) <= 10 # Paginated to 10
     assert res.total_count >= 12 # Real total is 13 (or >= 12)
 
+def test_price_budget_fallback_strictly_respects_max_price(db):
+    """Block 1: Fallback must NEVER relax max_price or category filter."""
+    res_violao = query_products(db, search_term="violao", max_price=100.0)
+    assert res_violao.total_count == 0
+    assert len(res_violao) == 0
+
+    res_guitarra = query_products(db, search_term="guitarra", max_price=200.0)
+    assert res_guitarra.total_count == 0
+    assert len(res_guitarra) == 0
+
+    # Non-active lookup without max_price continues to find discontinued items
+    res_ibanez = query_products(db, search_term="ibanez bass")
+    assert res_ibanez.total_count == 1
+    assert res_ibanez[0]["status"] == "discontinued"
+
+

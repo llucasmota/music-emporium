@@ -14,6 +14,14 @@ def test_buscar_produtos_tool(tools):
     assert isinstance(res["produtos"], list)
     assert res["total_encontrados"] > 0
 
+    # Over budget query must trigger alternatives_em_estoque and empty produtos
+    res_budget = func(termo="violão", preco_maximo=100.0)
+    assert res_budget["total_encontrados"] == 0
+    assert res_budget["produtos"] == []
+    assert len(res_budget["alternativas_em_estoque"]) > 0
+    for alt in res_budget["alternativas_em_estoque"]:
+        assert alt["status"] == "active"
+
 def test_consultar_detalhes_produto_tool(tools):
     func = tools["consultar_detalhes_produto"]
     res = func(nome_ou_id="Yamaha C40")

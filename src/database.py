@@ -294,8 +294,12 @@ def query_products(
             total_count = desc_count
         else:
             # Check if matching products exist in non-active status (e.g., discontinued or coming_soon)
+            # The status filter can be relaxed, but category and max_price MUST be preserved!
             status_where = "WHERE 1=1"
             status_params: List[Any] = []
+            if category:
+                status_where += " AND unaccent(c.name) LIKE ?"
+                status_params.append(f"%{normalize_text(category)}%")
             words = normalize_text(search_term).split()
             if words:
                 for w in words:
@@ -304,12 +308,23 @@ def query_products(
                     for v in variants:
                         status_params.extend([f"%{v}%", f"%{v}%"])
                     status_where += " AND (" + " OR ".join(w_clauses) + ")"
-                cursor.execute(f"SELECT COUNT(DISTINCT p.product_id) FROM products p LEFT JOIN categories c ON p.category_id = c.category_id LEFT JOIN promotions pr ON p.product_id = pr.product_id {status_where}", status_params)
-                status_count = cursor.fetchone()[0]
-                if status_count > 0:
-                    base_where = status_where
-                    params = status_params
-                    total_count = status_count
+            if max_price is not None:
+                status_where += """
+                    AND (
+                        CASE 
+                            WHEN pr.is_active = 1 AND pr.discount_percent IS NOT NULL 
+                            THEN ROUND(p.price_brl * (1 - (pr.discount_percent / 100.0)), 2)
+                            ELSE p.price_brl 
+                        END
+                    ) <= ?
+                """
+                status_params.append(max_price)
+            cursor.execute(f"SELECT COUNT(DISTINCT p.product_id) FROM products p LEFT JOIN categories c ON p.category_id = c.category_id LEFT JOIN promotions pr ON p.product_id = pr.product_id AND pr.is_active = 1 {status_where}", status_params)
+            status_count = cursor.fetchone()[0]
+            if status_count > 0:
+                base_where = status_where
+                params = status_params
+                total_count = status_count
 
     select_sql = f"""
         SELECT 
