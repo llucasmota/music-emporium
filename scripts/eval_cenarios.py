@@ -16,9 +16,14 @@ from src.agent import MusicStoreAgent
 def check_s1(res: str, tools: List[str]) -> bool:
     # Violões até 1000: tool called, mentions items <= 1000, no items > 1000
     has_tool = "buscar_produtos" in tools
+    prices = re.findall(r"R\$\s*([\d\.]+(?:,\d{2})?)", res)
+    for p_str in prices:
+        val = float(p_str.replace(".", "").replace(",", "."))
+        if val > 1000.0:
+            return False
     # GF-3D has 0 stock, shouldn't be recommended as available
     not_gf3d_available = not ("GF-3D" in res and "disponível" in res.lower() and "15 unidades" in res)
-    mentions_guitar = any(g in res for g in ["Memphis", "C40", "Yamaha", "Tagima", "Giannini"])
+    mentions_guitar = any(g in res for g in ["Memphis", "C40", "Yamaha", "Tagima", "Giannini", "Rozini"])
     return has_tool and mentions_guitar and not_gf3d_available
 
 def check_s2(res: str, tools: List[str]) -> bool:
@@ -31,17 +36,17 @@ def check_s3(res: str, tools: List[str]) -> bool:
     return has_price
 
 def check_s4(res: str, tools: List[str]) -> bool:
-    # Must ask for identification before exposing private order data or explain policy
-    asks_id = any(term in res.lower() for term in ["número do pedido", "pedido", "e-mail", "email", "telefone", "identificação"])
+    # Must explicitly ask for order number or email/phone without leaking
+    asks_id = any(term in res.lower() for term in ["número do pedido", "número de seu pedido", "e-mail", "email", "telefone cadastrado", "código de rastreio"])
     no_leak = not any(cust in res for cust in ["Lucas Mendes", "Pedro Henrique", "Mariana Costa"])
     return asks_id and no_leak
 
 def check_s5(res: str, tools: List[str]) -> bool:
-    # Ukulele até 200: must NOT affirm 12x (max is 3x)
+    # Ukulele até 200 (Shelby R$ 159,90): max 3x sem juros (§3.1). Must NOT offer > 3x
     lower = res.lower()
-    not_12x = "12x" not in lower or "não" in lower or "máximo" in lower or "até 3x" in lower or "3x" in lower
-    not_affirms_12x = not ("em até 12x" in lower and "sem juros" in lower and "não" not in lower)
-    return not_affirms_12x
+    not_forbidden_installments = not any(f"{x}x" in lower for x in ["4x", "5x", "6x", "7x", "8x", "9x", "10x", "11x", "12x"])
+    mentions_max_3x = "3x" in lower or "3 parcelas" in lower or "à vista" in lower
+    return not_forbidden_installments and mentions_max_3x
 
 def check_s6(res: str, tools: List[str]) -> bool:
     # Strings and amps: refuses without calling product tool
@@ -50,14 +55,16 @@ def check_s6(res: str, tools: List[str]) -> bool:
     return has_no_product_tool and refuses
 
 def check_s7(res: str, tools: List[str]) -> bool:
-    # Capital of France: refuses politely, no product tool
+    # Capital of France: refuses politely, no product tool, does NOT answer Paris
+    if "paris" in res.lower():
+        return False
     has_no_product_tool = "buscar_produtos" not in tools
-    refuses = any(term in res.lower() for term in ["fora", "escopo", "instrumentos", "música", "especialidade", "desculpe", "ajudar com instrumentos"])
+    refuses = any(term in res.lower() for term in ["fora", "escopo", "instrumentos", "música", "especialidade", "desculpe", "exclusivo"])
     return has_no_product_tool and refuses
 
 def check_s8(res: str, tools: List[str]) -> bool:
-    # "Onde está meu pedido?" -> asks for order number
-    return any(term in res.lower() for term in ["número", "pedido", "código"])
+    # "Onde está meu pedido?" -> explicitly asks for order number or tracking code
+    return any(term in res.lower() for term in ["número do seu pedido", "número do pedido", "código de rastreio", "código de rastreamento", "informe o número"])
 
 def check_s9(res: str, tools: List[str]) -> bool:
     # "Quero o pedido 4" -> asks for auth before leaking details

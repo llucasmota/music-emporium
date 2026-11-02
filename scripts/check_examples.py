@@ -31,7 +31,7 @@ def check_examples():
     products = cursor.fetchall()
     
     cursor.execute("""
-        SELECT o.order_id, o.customer_id, c.name, o.total_brl, o.status, o.tracking_code, o.notes
+        SELECT o.order_id, o.customer_id, c.name, c.email, c.phone, o.total_brl, o.status, o.tracking_code, o.notes
         FROM orders o
         JOIN customers c ON o.customer_id = c.customer_id
     """)
@@ -47,24 +47,48 @@ def check_examples():
     for file_path in md_files:
         content = file_path.read_text(encoding="utf-8")
         
-        # Check B5: Unsupported promises
-        for pattern in unsupported_patterns:
-            match = pattern.search(content)
-            if match:
-                divergences.append(
-                    f"[{file_path.name}] B5 Violation: Promised unsupported action: '{match.group(0)}'"
-                )
+        # Split into conversational turns for accurate turn-by-turn verification
+        # Turn blocks alternate: Cliente vs Atendente
+        turns = re.split(r"\*\*(Cliente|Atendente [^\*]+)\:\*\*", content)
+        # turns[1::2] are headers, turns[2::2] are body contents
+        client_history_text = ""
+        
+        for i in range(1, len(turns), 2):
+            role = turns[i].strip()
+            body = turns[i+1] if (i+1) < len(turns) else ""
+            
+            if "Cliente" in role:
+                client_history_text += " " + body.lower()
+            else:
+                # Assistant turn:
+                # Check B5: Unsupported promises
+                # "registrei" or "registrada" without REC-\d{8}-\d{4} in the same turn is a violation
+                if re.search(r"\b(registrei|registrada)\b", body, re.IGNORECASE):
+                    if not re.search(r"REC-\d{8}-\d{4}", body):
+                        divergences.append(
+                            f"[{file_path.name}] B5 Violation: Assistant claimed 'registrei' without a valid REC protocol in the same turn: '{body[:60]}...'"
+                        )
+                for pattern in unsupported_patterns:
+                    match = pattern.search(body)
+                    if match:
+                        divergences.append(
+                            f"[{file_path.name}] B5 Violation: Promised unsupported action: '{match.group(0)}'"
+                        )
                 
-        # Check B6: Customer privacy (revealing full name without prior verification request)
-        for order_id, order_data in orders.items():
-            customer_name = order_data["name"]
-            # If customer full name appears in assistant response
-            if customer_name in content:
-                # Check if the text asked for email/phone before showing customer name
-                if not re.search(r"(e-mail|email|telefone|confirmar|autenticar)", content, re.IGNORECASE):
-                    divergences.append(
-                        f"[{file_path.name}] B6 Violation: Revealed customer '{customer_name}' without verification"
-                    )
+                # Check B6: Customer privacy (revealing full name without prior verification in client history)
+                for order_id, order_data in orders.items():
+                    customer_full_name = order_data["name"]
+                    if customer_full_name in body:
+                        # Check if user already provided email or phone in previous turns
+                        user_email = (order_data["email"] or "").lower()
+                        phone_digits = "".join(filter(str.isdigit, str(order_data["phone"] or "")))
+                        last_8_phone = phone_digits[-8:] if len(phone_digits) >= 8 else ""
+                        
+                        verified = (user_email and user_email in client_history_text) or (last_8_phone and last_8_phone in client_history_text)
+                        if not verified:
+                            divergences.append(
+                                f"[{file_path.name}] B6 Violation: Revealed full customer name '{customer_full_name}' before user verified with email/phone"
+                            )
 
         # Check order numbers and tracking codes
         order_matches = re.finditer(r"(?:Pedido\s+(?:[Nn][ºo°]?\s*)?#?|Nº\s+)(\d+)", content, re.IGNORECASE)
@@ -96,25 +120,35 @@ def check_examples():
                             f"[{file_path.name}] Stock mismatch for '{p_name}': found {found_stock}, expected {p['stock_quantity']}"
                         )
                 
-                # Check price mentioned for this product
-                # e.g., "Takamine GD20 ... R$ 2.890" vs expected 2199
-                price_pattern = rf"{re.escape(p_name)}[^\n]*?R\$\s*([\d\.]+(?:,\d{{2}})?)"
-                price_match = re.search(price_pattern, content, re.IGNORECASE)
-                if price_match:
-                    price_str = price_match.group(1).replace(".", "").replace(",", ".")
-                    found_price = float(price_str)
-                    expected_price = float(p["price_brl"])
-                    expected_pix = round(expected_price * 0.95, 2)
-                    if p["discount_percent"]:
-                        expected_promo = round(expected_price * (1 - p["discount_percent"] / 100), 2)
-                        valid_prices = [expected_price, expected_promo]
-                    else:
-                        valid_prices = [expected_price, expected_pix, round(expected_price * 0.95, 2)]
-                    
-                    if not any(abs(found_price - vp) < 0.05 for vp in valid_prices):
-                        divergences.append(
-                            f"[{file_path.name}] Price mismatch for '{p_name}': found R$ {found_price:.2f}, expected R$ {expected_price:.2f} (or PIX/Promo)"
-                        )
+                # Check price mentioned for this product within its conversational block (up to 5 lines or next item)
+                lines = content.splitlines()
+                for line_idx, line in enumerate(lines):
+                    if p_name in line:
+                        block_lines = [line]
+                        for next_line in lines[line_idx + 1 : min(line_idx + 6, len(lines))]:
+                            if next_line.strip().startswith("• ") or next_line.strip().startswith("**Cliente") or next_line.strip().startswith("**Atendente"):
+                                break
+                            block_lines.append(next_line)
+                        window_text = "\n".join(block_lines)
+                        price_matches = re.findall(r"R\$\s*([\d\.]+(?:,\d{2})?)", window_text)
+                        for pm in price_matches:
+                            price_str = pm.replace(".", "").replace(",", ".")
+                            found_price = float(price_str)
+                            expected_price = float(p["price_brl"])
+                            expected_pix = round(expected_price * 0.95, 2)
+                            if p["discount_percent"]:
+                                expected_promo = round(expected_price * (1 - p["discount_percent"] / 100), 2)
+                                valid_prices = [expected_price, expected_promo]
+                            else:
+                                valid_prices = [expected_price, expected_pix, round(expected_price * 0.95, 2)]
+                            
+                            if found_price > 50.0:
+                                is_valid_price = any(abs(found_price - vp) < 0.15 for vp in valid_prices)
+                                is_valid_inst = any(abs(found_price - round(vp / n, 2)) < 0.15 for vp in valid_prices for n in range(2, 13))
+                                if not (is_valid_price or is_valid_inst):
+                                    divergences.append(
+                                        f"[{file_path.name}] Price mismatch for '{p_name}': found R$ {found_price:.2f}, not matching expected table, PIX or installment"
+                                    )
 
     print("\n" + "=" * 60)
     if divergences:
