@@ -4,16 +4,16 @@
 Qual é o endereço físico da loja de vocês e qual o horário de funcionamento hoje?
 
 **Atendente (Empório da Música):**
-Estamos na Rua 14 de Maio, 3200 — Centro, Campo Grande - MS. 
+Ficamos na Rua 14 de Maio, 3200 — Centro, em Campo Grande/MS. 
 
-Como hoje é segunda-feira, nosso atendimento presencial e pelo WhatsApp funciona das 09:00 às 18:00.
+Hoje, infelizmente, nossa loja física e o atendimento normal estão fechados por conta do feriado nacional de Finados. Amanhã retomamos nossas atividades das 09h às 18h!
 
-Posso te ajudar com a busca de algum instrumento em nosso catálogo hoje?
+Como posso te ajudar com os nossos instrumentos musicais?
 
 **Cliente:**
 Vocês abrem aos domingos ou feriados?
 
 **Atendente (Empório da Música):**
-Não, aos domingos e feriados a nossa loja fica fechada. Funcionamos de segunda a sexta, das 09:00 às 18:00, e aos sábados, das 09:00 às 13:00.
+Não abrimos aos domingos e feriados, pois nesses dias nossas equipes descansam. De segunda a sexta-feira atendemos das 09h às 18h, e aos sábados das 09h às 13h. 
 
-Gostaria de conferir a disponibilidade de algum instrumento musical por aqui?
+Tem algum instrumento que você gostaria de conhecer por aqui?

@@ -43,10 +43,11 @@ SCENARIOS = [
     },
     {
         "filename": "05_cenario_nao_trivial_hibrido.md",
-        "title": "05: Cenário Não-Trivial Híbrido (Devolução por Arrependimento + Consulta Takamine GD20)",
+        "title": "05: Cenário Não-Trivial Híbrido (Prazos de Devolução/Garantia e Registro de Reclamação Formal)",
         "turns": [
-            "Olá! Fiz uma compra online com vocês há 4 dias (Pedido 1) e quero saber se posso devolver por arrependimento. Meu e-mail é pedro.oliveira@jmail.com. Como funciona o frete e o reembolso?",
-            "Entendido! E aproveitando: quanto custa o Takamine GD20? Vocês têm a pronta entrega no estoque e qual o valor no PIX e parcelado?"
+            "Olá! Fiz uma compra online com vocês (Pedido 1) e gostaria de solicitar a devolução por arrependimento. Meu e-mail é pedro.oliveira@jmail.com.",
+            "Poxa, que decepção! O violão começou a apresentar problemas e eu esperava mais consideração. Quero registrar uma reclamação formal sobre isso!",
+            "O braço do violão Martin D-28 apresentou empenamento severo. Pode registrar a queixa para o meu e-mail pedro.oliveira@jmail.com referente ao pedido 1."
         ]
     }
 ]
