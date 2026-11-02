@@ -28,7 +28,7 @@ POLICIES: Dict[str, str] = {
     "trocas_devolucoes": """
 • Direito de Arrependimento (Compras Online - §4.1): Até 7 (sete) dias corridos após o recebimento do produto, sem necessidade de justificativa. O produto deve estar na embalagem original, sem sinais de uso, com manuais e acessórios. O frete de devolução é por conta da loja e o reembolso ocorre em até 10 dias úteis na mesma forma de pagamento original.
 • Troca por Defeito de Fabricação (§4.2): Em até 30 (trinta) dias corridos após a compra diretamente com a loja. Após os 30 dias, o cliente deve acionar a garantia do fabricante (a loja pode intermediar). Mau uso, umidade excessiva ou quedas não são cobertos.
-• Trocas por Preferência (§4.3): Permitidas em até 7 dias, mediante disponibilidade do produto desejado. O produto deve estar em perfeito estado e na embalagem original. Diferenças de valor serão cobradas ou reembolsadas conforme o caso.
+• Trocas por Preferência (§4.3): Permitidas em até 7 dias, mediante disponibilidade do produto desejado. O produto deve estar em perfeito estado e na embalagem original. Diferenças de valor serão cobradas ou reembolsadas conforme o caso (sem previsão de estorno ou reembolso imediato "na hora").
 • Itens Não Elegíveis para Troca (§4.4): Instrumentos com personalização ou ajustes sob encomenda (setup, regulagem especial), produtos adquiridos em promoções de liquidação com aviso explícito de "venda final", e boquilhas de instrumentos de sopro (por razões de higiene).
 """,
     "frete_entregas": """
