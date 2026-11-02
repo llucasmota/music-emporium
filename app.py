@@ -157,16 +157,22 @@ if "messages" not in st.session_state:
 st.title("Atendimento ao Cliente")
 st.caption("Converse sobre instrumentos, preços, status de pedidos e políticas da loja.")
 
+def format_for_display(text: str) -> str:
+    """Escapes $ to \\$ so Streamlit KaTeX doesn't consume Brazilian Real prices (R$) as LaTeX math."""
+    if not isinstance(text, str):
+        return text
+    return text.replace(r"R\$", "R$").replace("R$", r"R\$")
+
 # Render message history
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
-        st.markdown(msg["content"])
+        st.markdown(format_for_display(msg["content"]))
 
 # User input
 if prompt := st.chat_input("Digite sua dúvida ou o instrumento que procura..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
-        st.markdown(prompt)
+        st.markdown(format_for_display(prompt))
 
     with st.chat_message("assistant"):
         message_placeholder = st.empty()
@@ -189,5 +195,5 @@ if prompt := st.chat_input("Digite sua dúvida ou o instrumento que procura...")
         """, unsafe_allow_html=True)
 
         reply = st.session_state.agent.chat(prompt)
-        message_placeholder.markdown(reply)
+        message_placeholder.markdown(format_for_display(reply))
         st.session_state.messages.append({"role": "assistant", "content": reply})
