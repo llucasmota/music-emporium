@@ -1,6 +1,7 @@
 import warnings
 warnings.filterwarnings("ignore")
 
+import re
 from datetime import datetime
 from zoneinfo import ZoneInfo
 import streamlit as st
@@ -158,9 +159,12 @@ st.title("Atendimento ao Cliente")
 st.caption("Converse sobre instrumentos, preços, status de pedidos e políticas da loja.")
 
 def format_for_display(text: str) -> str:
-    """Escapes $ to \\$ so Streamlit KaTeX doesn't consume Brazilian Real prices (R$) as LaTeX math."""
+    """Formats Markdown for Streamlit: ensures newlines before bullets and escapes $ for KaTeX."""
     if not isinstance(text, str):
         return text
+    # Ensure bullets start on their own line
+    text = re.sub(r'([^\n])\s*•\s*', r'\1\n• ', text)
+    # Escape R$ to R\$ for Streamlit KaTeX
     return text.replace(r"R\$", "R$").replace("R$", r"R\$")
 
 # Render message history

@@ -1,4 +1,5 @@
 import uuid
+import re
 import logging
 from typing import Any, Dict, List, Optional
 from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
@@ -95,6 +96,9 @@ class MusicStoreAgent:
             if isinstance(reply_text, list):
                 # If multimodal or structured parts
                 reply_text = "".join([str(p.get("text", p)) if isinstance(p, dict) else str(p) for p in reply_text])
+
+            # Ensure bullets always start on their own line for proper Markdown formatting
+            reply_text = re.sub(r'([^\n])\s*•\s*', r'\1\n• ', reply_text)
 
             self.history.append({"role": "assistant", "content": reply_text})
             return reply_text
