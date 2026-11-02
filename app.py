@@ -6,6 +6,7 @@ from zoneinfo import ZoneInfo
 import streamlit as st
 from src.agent import MusicStoreAgent
 from src.config import settings
+from src.calendar_utils import is_store_open
 
 def get_store_status_badge() -> str:
     """Calculates whether store is open based on current time in Campo Grande/MS (manual §2)."""
@@ -14,19 +15,7 @@ def get_store_status_badge() -> str:
     except Exception:
         now_cg = datetime.now()
 
-    weekday = now_cg.weekday()  # 0=Monday, ..., 5=Saturday, 6=Sunday
-    hour = now_cg.hour
-    minute = now_cg.minute
-    time_val = hour + minute / 60.0
-
-    is_open = False
-    if 0 <= weekday <= 4:  # Seg-Sex: 09h às 18h
-        is_open = 9.0 <= time_val < 18.0
-    elif weekday == 5:     # Sáb: 09h às 13h
-        is_open = 9.0 <= time_val < 13.0
-    else:                  # Dom e feriados: Fechado
-        is_open = False
-
+    is_open, desc = is_store_open(now_cg)
     time_label = now_cg.strftime("%H:%M")
     if is_open:
         return f'<span class="store-badge" style="background-color: #2e7d32;">● Aberto</span> ({time_label})'

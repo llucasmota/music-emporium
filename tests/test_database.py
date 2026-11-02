@@ -164,4 +164,29 @@ def test_price_budget_fallback_strictly_respects_max_price(db):
     assert res_ibanez.total_count == 1
     assert res_ibanez[0]["status"] == "discontinued"
 
+def test_block_2b_order_return_eligibility_and_phone_validation(db):
+    """Block 2b: Order return eligibility against estimated_delivery and endswith phone check."""
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    tz = ZoneInfo("America/Campo_Grande")
+    fixed_now = datetime(2026, 11, 2, 12, 0, tzinfo=tz)
+
+    # Order 1 (delivered 2025-10-25) checked on 2026-11-02 -> over 370 days elapsed
+    res1 = query_order(db, order_id=1, customer_query="pedro.oliveira@jmail.com", current_time=fixed_now)
+    assert res1["status"] == "success"
+    p1 = res1["pedido"]
+    assert p1["dias_desde_entrega"] > 300
+    assert p1["elegivel_arrependimento"] is False
+    assert p1["elegivel_troca_defeito"] is False
+    assert p1["dentro_garantia_legal"] is False
+
+    # Phone test: digits 2-9 of order 4 phone must FAIL
+    res_fail = query_order(db, order_id=4, customer_query="79981234")
+    assert res_fail["status"] == "verification_failed"
+
+    # Endswith valid suffix (9 digits or 8 digits) must SUCCEED
+    res_ok = query_order(db, order_id=4, customer_query="998123456")
+    assert res_ok["status"] == "success"
+
+
 

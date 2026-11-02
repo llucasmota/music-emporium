@@ -1,10 +1,12 @@
 import csv
+from datetime import datetime, date
 from decimal import Decimal, ROUND_HALF_UP
 import json
 import sqlite3
 import unicodedata
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from zoneinfo import ZoneInfo
 from src.config import settings
 
 class ProductList(list):
@@ -492,12 +494,18 @@ def _format_product_details_row(row: sqlite3.Row) -> Dict[str, Any]:
 def query_order(
     conn: sqlite3.Connection,
     order_id: Optional[int] = None,
-    customer_query: Optional[str] = None
+    customer_query: Optional[str] = None,
+    current_time: Optional[datetime] = None
 ) -> Dict[str, Any]:
     """Retrieves order details enforcing LGPD privacy (§9).
     Requires order_id + email/phone verification, or valid tracking code.
+    Also calculates elapsed delivery days and return/warranty eligibility (§4.1, §4.2, §8.1).
     """
     cursor = conn.cursor()
+    try:
+        now_cg = current_time or datetime.now(ZoneInfo("America/Campo_Grande"))
+    except Exception:
+        now_cg = current_time or datetime.now()
 
     # Case 1: Tracking code direct lookup
     if customer_query and customer_query.startswith("BR") and customer_query.endswith("BR") and len(customer_query) >= 11:
@@ -510,6 +518,22 @@ def query_order(
         row = cursor.fetchone()
         if not row:
             return {"status": "not_found", "mensagem": f"Nenhum envio localizado com o código de rastreio '{customer_query}'."}
+        
+        dias_desde_entrega: Optional[int] = None
+        elegivel_arrependimento = False
+        elegivel_troca_defeito = False
+        dentro_garantia_legal = False
+        if row["estimated_delivery"]:
+            try:
+                delivery_dt = datetime.strptime(str(row["estimated_delivery"]).strip(), "%Y-%m-%d").date()
+                dias_desde_entrega = (now_cg.date() - delivery_dt).days
+                if dias_desde_entrega >= 0:
+                    elegivel_arrependimento = (dias_desde_entrega <= 7)
+                    elegivel_troca_defeito = (dias_desde_entrega <= 30)
+                    dentro_garantia_legal = (dias_desde_entrega <= 90)
+            except Exception:
+                pass
+
         return {
             "status": "success",
             "tipo_consulta": "rastreamento",
@@ -518,6 +542,10 @@ def query_order(
                 "tracking_code": row["tracking_code"],
                 "status": row["status"],
                 "estimated_delivery": row["estimated_delivery"],
+                "dias_desde_entrega": dias_desde_entrega,
+                "elegivel_arrependimento": elegivel_arrependimento,
+                "elegivel_troca_defeito": elegivel_troca_defeito,
+                "dentro_garantia_legal": dentro_garantia_legal,
                 "notes": row["notes"]
             }
         }
@@ -548,7 +576,7 @@ def query_order(
 
         is_verified = (
             (cust_query_norm and cust_query_norm == cust_email_norm) or
-            (cust_phone_clean and len(query_phone_clean) >= 8 and query_phone_clean in cust_phone_clean)
+            (cust_phone_clean and len(query_phone_clean) >= 8 and cust_phone_clean.endswith(query_phone_clean))
         )
 
         if not is_verified:
@@ -568,6 +596,21 @@ def query_order(
         item_rows = cursor.fetchall()
         items = [{"product_name": ir["name"], "quantity": ir["quantity"], "unit_price": float(ir["price_brl"])} for ir in item_rows]
 
+        dias_desde_entrega = None
+        elegivel_arrependimento = False
+        elegivel_troca_defeito = False
+        dentro_garantia_legal = False
+        if order_row["estimated_delivery"]:
+            try:
+                delivery_dt = datetime.strptime(str(order_row["estimated_delivery"]).strip(), "%Y-%m-%d").date()
+                dias_desde_entrega = (now_cg.date() - delivery_dt).days
+                if dias_desde_entrega >= 0:
+                    elegivel_arrependimento = (dias_desde_entrega <= 7)
+                    elegivel_troca_defeito = (dias_desde_entrega <= 30)
+                    dentro_garantia_legal = (dias_desde_entrega <= 90)
+            except Exception:
+                pass
+
         return {
             "status": "success",
             "pedido": {
@@ -579,6 +622,10 @@ def query_order(
                 "payment_method": order_row["payment_method"],
                 "tracking_code": order_row["tracking_code"],
                 "estimated_delivery": order_row["estimated_delivery"],
+                "dias_desde_entrega": dias_desde_entrega,
+                "elegivel_arrependimento": elegivel_arrependimento,
+                "elegivel_troca_defeito": elegivel_troca_defeito,
+                "dentro_garantia_legal": dentro_garantia_legal,
                 "notes": order_row["notes"],
                 "items": items
             }

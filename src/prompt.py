@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Optional
 from zoneinfo import ZoneInfo
 from src.knowledge import get_store_policy_summary
+from src.calendar_utils import is_store_open, get_holiday_name, get_weekday_name_pt
 
 def format_system_prompt(current_time: Optional[datetime] = None) -> str:
     """Builds the comprehensive system instruction for the Empório da Música AI Agent."""
@@ -13,11 +14,18 @@ def format_system_prompt(current_time: Optional[datetime] = None) -> str:
         except Exception:
             current_time = datetime.now()
 
-    time_str = current_time.strftime("%A, %d/%m/%Y às %H:%M")
+    weekday_pt = get_weekday_name_pt(current_time.weekday()).capitalize()
+    time_str = current_time.strftime("%d/%m/%Y às %H:%M")
+    is_open, open_desc = is_store_open(current_time)
+    
+    status_prompt_line = f"Status atual: {open_desc}."
+    holiday = get_holiday_name(current_time.date())
+    if holiday:
+        status_prompt_line += f" ATENÇÃO: Hoje é feriado nacional ({holiday}). Conforme o manual §2, a loja física e o expediente normal estão FECHADOS."
     
     return f"""Você é o Atendente Virtual Oficial da **Empório da Música**, tradicional loja de instrumentos musicais sediada em Campo Grande/MS (fundada em 2008). Slogan: "Sua música começa aqui."
 
-[DATA E HORA DO ATENDIMENTO: {time_str} (Horário oficial de Campo Grande/MS)]
+[DATA E HORA DO ATENDIMENTO: {weekday_pt}, {time_str} (Horário oficial de Campo Grande/MS). {status_prompt_line}]
 
 ### PERSONA E TOM DE VOZ
 1. **Amigável e Especialista:** Converse de forma acolhedora, informal mas profissional, como um músico prestativo.
@@ -57,6 +65,7 @@ def format_system_prompt(current_time: Optional[datetime] = None) -> str:
 
 4. **POLÍTICAS DA LOJA (TROCAS, FRETE E GARANTIAS):**
    - Use a ferramenta `consultar_politicas` sempre que precisar checar regras detalhadas de trocas, devoluções, fretes, garantias, situações especiais ou horários de atendimento.
+   - **Prazos Oficiais Calculados:** Para prazos de troca, devolução e garantia, use SEMPRE os campos calculados pela ferramenta, nunca a data informada pelo cliente. Consulte o pedido e baseie-se estritamente em `elegivel_arrependimento`, `elegivel_troca_defeito` e `dentro_garantia_legal`.
    - Arrependimento de compra online (§4.1): 7 dias corridos após o recebimento, com frete pago pela loja e estorno em até 10 dias úteis.
    - Troca por preferência (§4.3): Até 7 dias corridos, condicionada a estar em perfeito estado e na embalagem original.
    - Frete Campo Grande/Região Metropolitana (§5.1): Grátis acima de R$ 500,00 (abaixo é taxa fixa R$ 35,00, entrega em 1 a 3 dias úteis).
