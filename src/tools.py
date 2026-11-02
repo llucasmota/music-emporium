@@ -85,7 +85,7 @@ def create_langchain_tools(db_conn: sqlite3.Connection) -> List[Any]:
         """Consulta o manual de políticas oficiais da Empório da Música para tirar dúvidas de clientes.
         
         Args:
-            topico: O tema da política. Deve ser um entre: 'trocas_devolucoes', 'formas_pagamento', 'frete_entregas', 'horario_funcionamento', 'garantia', 'sobre_a_loja'.
+            topico: O tema da política. Deve ser um entre os 9 tópicos oficiais: 'sobre_a_loja', 'horario_funcionamento', 'formas_pagamento', 'trocas_devolucoes', 'frete_entregas', 'garantia', 'promocoes', 'situacoes_especiais', 'privacidade'.
             
         Returns:
             O texto oficial da regra da loja com prazos, condições e diretrizes legais.

@@ -57,9 +57,14 @@ POLICIES: Dict[str, str] = {
     "privacidade": """
 • Privacidade e Proteção de Dados - LGPD (§9):
   - A Empório da Música está em conformidade com a Lei Geral de Proteção de Dados (LGPD — Lei nº 13.709/2018).
-  - Os dados pessoais coletados durante o atendimento (nome, telefone, e-mail, endereço) são utilizados exclusivamente para: processamento e entrega de pedidos, comunicação sobre status de pedidos e rastreamento, e cumprimento de obrigações legais e fiscais.
-  - Dados de clientes não são compartilhados com terceiros.
-  - Por segurança e privacidade, a consulta a dados de pedidos exige confirmação de titularidade (número do pedido acompanhado de e-mail ou telefone cadastrado, ou código de rastreamento). Nunca revele dados de clientes ou status de pedidos sem verificação prévia.
+  - Os dados pessoais coletados durante o atendimento (nome, telefone, e-mail, endereço) são utilizados exclusivamente para:
+    * Processamento e entrega de pedidos.
+    * Comunicação sobre status de pedidos e rastreamento.
+    * Envio de promoções e novidades (mediante consentimento explícito do cliente).
+    * Cumprimento de obrigações legais e fiscais.
+  - Dados de clientes não são compartilhados com terceiros para fins de marketing.
+  - O cliente pode solicitar a exclusão de seus dados a qualquer momento entrando em contato pelo WhatsApp ou e-mail.
+  - Regra de atendimento do projeto: Por segurança e privacidade, a consulta a dados de pedidos no chat exige confirmação de titularidade (número do pedido acompanhado de e-mail ou telefone cadastrado, ou código de rastreamento). Nunca revele dados de clientes ou status de pedidos sem verificação prévia.
 """
 }
 
@@ -83,4 +88,3 @@ def get_store_policy_summary() -> str:
         title = topic.replace("_", " ").title()
         sections.append(f"#### {title}\n{text.strip()}")
     return "\n\n".join(sections)
-    return "\n".join([f"### {k.upper().replace('_', ' ')}\n{v}" for k, v in POLICIES.items()])
