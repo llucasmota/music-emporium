@@ -157,7 +157,7 @@ def check_examples():
             print(f"  - {d}")
         return 1
     else:
-        print("✅ PASSED: Zero divergences found across all examples!")
+        print("✅ PASSED: All structural checks passed with no divergences found.")
         print("=" * 60)
         return 0
 
