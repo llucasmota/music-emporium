@@ -45,14 +45,14 @@ This project delivers an autonomous, production-grade **AI Customer Service Agen
                 ┌──────────────────────────────┐                           ┌──────────────────────────────┐
                 │   Database Engine (`src/db`) │                           │ Knowledge Engine (`src/know`)│
                 │ - In-Memory SQLite Store     │                           │ - Structured Policy Sections │
-                │ - Parameterized Catalog/Order│                           │ - 100% Deterministic Terms   │
+                │ - Parameterized Catalog/Order│                           │ - Deterministic Policy Terms │
                 │   Queries (`data/*.csv`)     │                           │   (`políticas_da_loja.pdf`)  │
                 └──────────────────────────────┘                           └──────────────────────────────┘
 ```
 
 ### Key Architectural Strengths:
 - **Clean Decoupling:** `MusicStoreAgent` operates as a standalone domain service. It has zero coupling with the presentation layer; swapping the CLI or Streamlit for an official WhatsApp Business Cloud API webhook requires zero modifications to the core engine.
-- **Zero Hallucination Guarantee:** The agent is forbidden from assuming prices or stock quantities. Ground-truth data is retrieved directly from relational queries and injected into the prompt context.
+- **Ground-Truth Retrieval & Anti-Hallucination Guardrails:** The agent is programmatically constrained from inventing prices, stock, or policies. Ground-truth data is retrieved directly from relational queries and injected into the prompt context to prevent hallucinations.
 - **Graceful Degradation with Musical Metaphors:** When technical issues occur (e.g., connectivity drops), the agent remains fully in character using musical metaphors (*"Oops, sounds like our cable had a loose connection! Let me tune this up—can you resend that message in a minute?"*) while developer logs capture the full stack trace when `DEBUG_MODE=true`.
 
 ---
@@ -65,7 +65,7 @@ This project delivers an autonomous, production-grade **AI Customer Service Agen
 | **LLM Provider & Model** | **Google Gemini (`gemini-3.5-flash-lite`)** via `langchain-google-genai` | Ultra-low latency (~1.0s raw, ~4.5s full LangGraph ReAct loop with tools), zero quota throttling on free tier, high accuracy on tool arguments, and cost-effective production scaling. |
 | **Agent Orchestration** | **LangGraph StateGraph (`langgraph`)** | Directly aligns with Artefact's core stack. StateGraph with `ToolNode` to isolate SQLite and policy tools, conditional routing via `tools_condition`, and thread checkpointing using `MemorySaver`. |
 | **Data Layer** | **SQLite In-Memory (`sqlite3` built-in)** | Zero heavyweight dependencies (avoids pandas bloat); sub-millisecond startup ingestion; supports relational JOINs across customers, orders, items, and promotions; parameterized queries eliminate SQL injection risks. |
-| **Store Policies (PDF)** | **In-Context Structured Knowledge + Topic Retrieval Tool** | For an 8-page manual (~2,500 words / ~3,000 tokens), setting up a Vector Database (ChromaDB/FAISS) with embeddings is classic **over-engineering**. The structured in-context approach eliminates chunk fragmentation, reduces latency, and guarantees 100% legal precision. |
+| **Store Policies (PDF)** | **In-Context Structured Knowledge + Topic Retrieval Tool** | For an 8-page manual (~2,500 words / ~3,000 tokens), setting up a Vector Database (ChromaDB/FAISS) with embeddings is classic **over-engineering**. The structured in-context approach eliminates chunk fragmentation, reduces latency, and ensures strict policy adherence without vector database complexity. |
 | **Interface Strategy** | **Dual Mode: CLI (Rich) + Web UI (Streamlit)** | Solves both evaluation and product needs: developer-friendly instant CLI execution (`main.py`) with `/export` command, alongside a visual WhatsApp-like experience (`app.py`) for non-technical business stakeholders. |
 
 ---
@@ -204,7 +204,7 @@ streamlit run app.py
 
 ## 6. Running Automated Tests
 
-The test suite covers configuration, SQLite ingestion, catalog filtering, orders joins, policy extraction, prompt constraints, and agent state management:
+The test suite covers configuration, SQLite ingestion, catalog filtering, orders joins, policy retrieval, prompt constraints, and agent state management:
 
 ```bash
 pytest -v
@@ -212,37 +212,40 @@ pytest -v
 
 Expected output:
 ```text
-tests/test_agent.py::test_agent_initialization PASSED                    [  6%]
-tests/test_agent.py::test_agent_history_reset PASSED                     [ 12%]
-tests/test_agent.py::test_agent_export_markdown PASSED                   [ 18%]
-tests/test_config.py::test_settings_load_defaults PASSED                 [ 25%]
-tests/test_database.py::test_query_products_with_price_limit PASSED      [ 31%]
-tests/test_database.py::test_query_product_details PASSED                [ 37%]
-tests/test_database.py::test_query_order_by_id PASSED                    [ 43%]
-tests/test_database.py::test_query_order_by_customer_name PASSED         [ 50%]
-tests/test_knowledge.py::test_available_topics PASSED                    [ 56%]
-tests/test_knowledge.py::test_get_policy_returns_accurate_terms PASSED   [ 62%]
-tests/test_knowledge.py::test_store_summary_includes_crucial_guardrails PASSED [ 68%]
-tests/test_prompt.py::test_system_prompt_contains_crucial_elements PASSED [ 75%]
-tests/test_tools.py::test_buscar_produtos_tool PASSED                    [ 81%]
-tests/test_tools.py::test_consultar_detalhes_produto_tool PASSED         [ 87%]
-tests/test_tools.py::test_consultar_pedido_tool PASSED                   [ 93%]
+tests/test_agent.py::test_agent_initialization PASSED                    [  5%]
+tests/test_agent.py::test_agent_history_reset PASSED                     [ 10%]
+tests/test_agent.py::test_agent_export_markdown PASSED                   [ 15%]
+tests/test_config.py::test_settings_load_defaults PASSED                 [ 20%]
+tests/test_database.py::test_query_products_with_price_limit PASSED      [ 25%]
+tests/test_database.py::test_query_product_details PASSED                [ 30%]
+tests/test_database.py::test_a1_pix_price_calculation PASSED             [ 35%]
+tests/test_database.py::test_a2_max_installments_calculation PASSED      [ 40%]
+tests/test_database.py::test_c1_order_privacy_and_notes PASSED           [ 45%]
+tests/test_database.py::test_c2_product_status PASSED                    [ 50%]
+tests/test_database.py::test_c3_robust_search_and_ambiguity PASSED       [ 55%]
+tests/test_database.py::test_c4_real_total_count PASSED                  [ 60%]
+tests/test_knowledge.py::test_available_topics PASSED                    [ 65%]
+tests/test_knowledge.py::test_get_policy_returns_accurate_terms PASSED   [ 70%]
+tests/test_knowledge.py::test_store_summary_includes_crucial_guardrails PASSED [ 75%]
+tests/test_prompt.py::test_system_prompt_contains_crucial_elements PASSED [ 80%]
+tests/test_tools.py::test_buscar_produtos_tool PASSED                    [ 85%]
+tests/test_tools.py::test_consultar_detalhes_produto_tool PASSED         [ 90%]
+tests/test_tools.py::test_consultar_pedido_tool PASSED                   [ 95%]
 tests/test_tools.py::test_consultar_politicas_tool PASSED                [100%]
-============================== 16 passed in 0.50s ==============================
+============================== 20 passed in 0.52s ==============================
 ```
 
 ---
 
 ## 7. Example Interactions
 
-The repository contains 6 recorded end-to-end interactions covering both standard and non-trivial complex scenarios:
+The repository contains recorded end-to-end interactions covering both standard and non-trivial complex scenarios:
 
 1. 📄 [`examples/01_consulta_catalogo.md`](examples/01_consulta_catalogo.md): Acoustic guitars under R$ 1,000, stock checks, and calculation of the 5% PIX discount on non-promotional items.
 2. 📄 [`examples/02_informacoes_loja_e_horarios.md`](examples/02_informacoes_loja_e_horarios.md): Physical store location, phone numbers, and weekend/holiday out-of-hours response handling.
-3. 📄 [`examples/03_status_e_rastreio_pedido.md`](examples/03_status_e_rastreio_pedido.md): Real-time order lookup (Order #4) fetching tracking code, delivery status, and warranty explanation.
+3. 📄 [`examples/03_status_e_rastreio_pedido.md`](examples/03_status_e_rastreio_pedido.md): Order lookup with LGPD verification (order ID + email), delivery status, notes inspection, and warranty terms.
 4. 📄 [`examples/04_fora_de_escopo_acessorios.md`](examples/04_fora_de_escopo_acessorios.md): Inquiries for strings, picks, pedals, and amps; demonstration of firm scope boundaries and polite referral to local partners.
 5. 📄 [`examples/05_cenario_nao_trivial_hibrido.md`](examples/05_cenario_nao_trivial_hibrido.md): **Non-trivial scenario**: Customer requesting return of an online purchase under the 7-day repentance clause (free return shipping, 10-day refund) while simultaneously checking live stock and price for a higher-tier Takamine GD20 guitar to perform an exchange with price difference adjustment.
-6. 📄 [`examples/06_interacao_real_guitarras_e_politicas.md`](examples/06_interacao_real_guitarras_e_politicas.md): **Real interactive evaluation dialogue**: Out-of-budget Floyd Rose search resolved via proactive two-tier suggestions, Fender Telecaster Player Series technical specs (vintage string-through fixed bridge), free shipping rules for Campo Grande, and detailed PIX 5% cash discount vs. 12x interest-free installments.
 
 ---
 
@@ -253,20 +256,27 @@ As encouraged by Artefact:
 
 ### The Workflow:
 - **Pair Programming Paradigm:** As an engineer with a strong background in **TypeScript, Node.js, and LangGraph.js**, I leveraged **Antigravity (powered by Gemini 3.8)** as a Senior Engineering Coach & Pair Programmer.
-- **Conceptual Transposition:** Rather than writing code blindly, the AI assisted in transposing mature architectural patterns from the TypeScript ecosystem (e.g., Zod schemas $\rightarrow$ Pydantic models; LangGraph state machines $\rightarrow$ native Python tool-calling loops; in-memory stores $\rightarrow$ native `sqlite3`).
+- **Conceptual Transposition:** Rather than writing code blindly, the AI assisted in transposing mature architectural patterns from the TypeScript ecosystem (e.g., Zod schemas $\rightarrow$ Pydantic models; LangGraph.js state machines $\rightarrow$ LangGraph Python StateGraph; in-memory stores $\rightarrow$ native `sqlite3`).
 - **Atomic TDD Discipline:** Every module was developed using strict Test-Driven Development (failing test $\rightarrow$ minimal code $\rightarrow$ passing test $\rightarrow$ atomic semantic git commit).
 - **Comprehensive Workflow Log:** A dedicated log is tracked at [`docs/ai_workflow_log.md`](docs/ai_workflow_log.md).
 
 ---
 
-## 9. Known Limitations & Future Roadmap ("What I Would Do With More Time")
+## 9. Current Known Limitations & Future Roadmap ("What I Would Do With More Time")
 
-While this project delivers an immediate, functional MVP satisfying 100% of the challenge specifications, here is the technical roadmap for production scale:
+### Current Known Limitations:
+1. **In-Memory Checkpointing (`MemorySaver`):** Conversation state is tracked in RAM per session. Restarting the process resets thread history (ideal for stateless CLI/evaluations, but requires Redis or PostgreSQL checkpointers in distributed deployments).
+2. **Deterministic Tokenized Search:** Catalog lookup uses unaccented SQLite token search. While resolving plurals and accents ("violao" $\rightarrow$ "violões"), it does not perform semantic embeddings for vague colloquial descriptions.
+3. **Absence of Automated Human Agent Handoff:** Complex customer complaints trigger instructions to contact SAC/ouvidoria (`(67) 3321-4500`), but do not automatically emit webhook notifications or create Zendesk/Jira tickets.
+4. **Synchronous Process Execution:** CLI and Streamlit run synchronously within single-worker environments without Celery/Redis queue workers.
+
+### Future Roadmap & Production Scaling:
+While this project delivers an immediate, functional MVP satisfying all functional requirements of the challenge specifications, here is the technical roadmap for production scale:
 
 1. **Abstract LLM Provider Layer (`LLMProvider` Protocol):**
    - Introduce an abstract base class / protocol allowing seamless hot-swapping between Google Gemini, OpenAI (`gpt-4o-mini`), and **OpenRouter** to dynamically route requests based on cost, token limits, and throughput benchmarks.
 2. **Hybrid Vector Search for Massive Catalogs:**
-   - If the catalog scaled from 64 to 100,000+ SKUs, SQLite `LIKE` queries would be replaced with `pgvector` or an embedded vector store (Chroma/Qdrant) combining semantic search with BM25 keyword filtering (Hybrid Search).
+   - If the catalog scaled from 65 to 100,000+ SKUs, SQLite `LIKE` queries would be replaced with `pgvector` or an embedded vector store (Chroma/Qdrant) combining semantic search with BM25 keyword filtering (Hybrid Search).
 3. **Omnichannel Headless Deployment (WhatsApp, Telegram & Embeddable Web Widget):**
    - Expose a decoupled asynchronous FastAPI service with native webhook connectors for **WhatsApp Business Cloud API** (Meta Graph API with HMAC verification) and **Telegram Bot API**.
    - Provide an embeddable web chat widget (`<script src="emporio-chat.js">`) with Server-Sent Events (SSE) streaming for third-party e-commerce storefronts.
@@ -276,7 +286,47 @@ While this project delivers an immediate, functional MVP satisfying 100% of the 
 
 ---
 
-## 10. Repository Structure
+## 10. Assumptions & Data Inconsistencies
+
+During data audit and ingestion across the store CSV files and the policy manual, several real-world dataset inconsistencies were identified and handled deterministically:
+
+1. **Order #3 Total vs. Items Sum:**
+   - *Discrepancy:* `orders.csv` registers total R$ 3,450.00, whereas items sum to $2 \times \text{R\$} 1,749.00 = \text{R\$} 3,498.00$ (divergence of R$ 48.00).
+   - *Decision:* The agent returns the official order invoice total recorded in the database while listing the itemized breakdown.
+2. **Order #20 Total vs. Items Sum & Delivery Notes:**
+   - *Discrepancy:* `orders.csv` registers total R$ 1,400.00, whereas items sum to $\text{R\$} 799.00 + \text{R\$} 689.00 = \text{R\$} 1,488.00$ (divergence of R$ 88.00).
+   - *Decision:* Returns the order total and explicitly exposes the internal `notes` field (*"Endereço de entrega inválido informado pelo cliente"*) when verified by the customer.
+3. **Product #130 (`Kala KA-ABP-CTG`) Status Discrepancy:**
+   - *Discrepancy:* Product 130 is marked as `coming_soon` in `products.csv`, but appears in a delivered historical order (Order #19).
+   - *Decision:* The catalog tool respects `coming_soon` for active shopping recommendations, while order lookup accurately reports historical order items.
+4. **Product Status vs. Stock Discrepancies:**
+   - *Discrepancy:* Product #136 (`Ibanez Bass 2X`) is marked `discontinued` but has stock = 13. Product #96 (`Giannini GF-3D`) is marked `active` but has stock = 0.
+   - *Decision:* Discontinued products are reported as discontinued regardless of warehouse stock; active products with stock 0 are reported as temporarily out of stock.
+5. **Duplicate Customer Email (`bruno.martins@jmail.com`):**
+   - *Discrepancy:* The same email is assigned to two distinct customer IDs (11 and 43).
+   - *Decision:* Per LGPD (§9), `consultar_pedido` strictly requires `order_id` authenticated with email or phone, preventing ambiguous customer record lookups.
+6. **PIX Payment in Historical Orders Without 5% Discount:**
+   - *Discrepancy:* Some historical orders marked with payment method `pix` do not reflect the 5% cash discount in the `total_amount` column.
+   - *Decision:* Historical transactions are reported as recorded. For active product inquiries, the 5% PIX price is calculated dynamically in code for non-promotional items.
+7. **Promotions Without Expiration Dates & Duplicate SKUs:**
+   - *Discrepancy:* `promotions.csv` has no date intervals, and products 93, 96, 99 appear duplicated with conflicting discounts.
+   - *Decision:* All records in `promotions.csv` are considered active promotions, with code selecting the maximum discount percentage for duplicated items.
+8. **Catalog Categories 6, 7, and 8 with Zero SKUs:**
+   - *Discrepancy:* Categories 6 (*Sopro*), 7 (*Metais*), and 8 (*Cordas Orquestrais*) contain 0 products in `products.csv`, despite manual §1 claiming "more than 300 instruments".
+   - *Decision:* The agent politely clarifies that current inventory is focused on acoustic/electric guitars, basses, and ukuleles, with woodwinds/brass currently unavailable.
+9. **Dual Store Phone Numbers:**
+   - *Discrepancy:* Manual §1.2 lists `(67) 3341-4444` as the general store phone, while §7.1 and §8 list `(67) 3321-4500` as the SAC/customer service line.
+   - *Decision:* Both numbers are preserved and provided in their respective contexts (general contact vs. returns/complaints).
+10. **Installment Calculation Conflict:**
+    - *Discrepancy:* Summary table mentions "minimum R$ 100 per installment", but §3.1 details gradual brackets (up to 3x without minimum except < R$ 50; 4–6x min R$ 80; 7–12x min R$ 100).
+    - *Decision:* Implemented the specific and customer-friendly §3.1 rules directly in code (`src/database.py`).
+11. **Absence of Temporal Reference in Static Datasets:**
+    - *Discrepancy:* Historical `pending` and `shipped` orders have dispatch dates far in the past relative to the present day.
+    - *Decision:* Dynamic `America/Campo_Grande` time is injected for store open/closed status, while order status is reported faithfully from database records.
+
+---
+
+## 11. Repository Structure
 
 ```
 music-emporium/
@@ -287,12 +337,27 @@ music-emporium/
 │   ├── __init__.py
 │   ├── config.py                        # Pydantic settings & environment validation
 │   ├── database.py                      # SQLite in-memory store & parameterized queries
-│   ├── knowledge.py                     # Structured store policy extraction
+│   ├── knowledge.py                     # In-context structured store policy engine
 │   ├── tools.py                         # Typed agent tool declarations
 │   ├── prompt.py                        # System prompt with musical persona & guardrails
 │   └── agent.py                         # Decoupled MusicStoreAgent engine
-├── examples/                            # 6 real interaction logs (.md)
+├── examples/                            # 5 recorded interaction logs (.md)
 ├── mockups/                             # Visual brainstorming mockups (HTML)
+├── tests/                               # Comprehensive Pytest test suite
+│   ├── test_config.py
+│   ├── test_database.py
+│   ├── test_knowledge.py
+│   ├── test_tools.py
+│   ├── test_prompt.py
+│   └── test_agent.py
+├── docs/
+│   ├── ai_workflow_log.md               # Detailed AI collaboration log
+│   └── superpowers/                     # Architecture specs & implementation plans
+├── main.py                              # Interactive CLI runner (Rich)
+├── app.py                               # Web UI runner (Streamlit)
+├── pyproject.toml / requirements.txt    # Modern dependency management
+└── README.md                            # Complete documentation (in English)
+```
 ├── tests/                               # Comprehensive Pytest test suite
 │   ├── test_config.py
 │   ├── test_database.py
