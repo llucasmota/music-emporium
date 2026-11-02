@@ -24,7 +24,9 @@ def create_langchain_tools(db_conn: sqlite3.Connection) -> List[Any]:
             Dicionário com a lista de instrumentos encontrados, seus preços reais, descontos de promoção ativos e estoque.
         """
         results = query_products(db_conn, search_term=termo, category=categoria, max_price=preco_maximo)
-        if len(results) == 0 and preco_maximo is not None:
+        total_found = getattr(results, "total_count", len(results))
+
+        if total_found == 0 and preco_maximo is not None:
             # Provide available products without price filter so the agent never hallucinates models
             alternatives = query_products(db_conn, search_term=termo, category=categoria)
             return {
@@ -35,7 +37,7 @@ def create_langchain_tools(db_conn: sqlite3.Connection) -> List[Any]:
             }
 
         return {
-            "total_encontrados": len(results),
+            "total_encontrados": total_found,
             "produtos": results
         }
 
@@ -47,31 +49,35 @@ def create_langchain_tools(db_conn: sqlite3.Connection) -> List[Any]:
             nome_ou_id: Nome do produto ou ID numérico (ex: 'Yamaha C40', 'Giannini GN-15', '81').
             
         Returns:
-            Ficha técnica com tipo de madeira, cordas, acabamento, captação, estoque e preço atual.
+            Ficha técnica com especificações, status comercial (ativo, descontinuado, em breve), preços PIX e parcelamento.
         """
         res = query_product_details(db_conn, nome_ou_id)
         if not res:
             return {"status": "not_found", "mensagem": f"Nenhum instrumento encontrado com o nome ou ID '{nome_ou_id}'."}
+        if res.get("status") == "ambiguous":
+            return res
         return {"status": "success", "produto": res}
 
     @tool
     def consultar_pedido(
         numero_pedido: Optional[int] = None,
+        email_ou_telefone: Optional[str] = None,
+        codigo_rastreio: Optional[str] = None,
         termo_cliente: Optional[str] = None
     ) -> Dict[str, Any]:
-        """Consulta o status atual, código de rastreamento e itens de um pedido de cliente.
+        """Consulta o status atual, código de rastreamento e itens de um pedido de cliente com validação de privacidade LGPD (§9).
         
         Args:
-            numero_pedido: O ID numérico do pedido (ex: 1, 4).
-            termo_cliente: Nome, e-mail, telefone do cliente ou código de rastreio.
+            numero_pedido: O ID numérico do pedido (ex: 4, 20).
+            email_ou_telefone: E-mail ou telefone cadastrado pelo cliente para autenticação de segurança.
+            codigo_rastreio: Código de rastreamento da transportadora (ex: 'BRQM7890123BR').
+            termo_cliente: Parâmetro legado de busca (e-mail, telefone, rastreio ou nome).
             
         Returns:
-            Dados completos do pedido: status (enviado, entregue), data, código de rastreio e itens comprados.
+            Status do pedido, itens comprados, notas de entrega ou aviso de verificação necessária.
         """
-        res = query_order(db_conn, order_id=numero_pedido, customer_query=termo_cliente)
-        if not res:
-            return {"status": "not_found", "mensagem": "Nenhum pedido localizado com os dados informados."}
-        return {"status": "success", "pedido": res}
+        cust_query = email_ou_telefone or codigo_rastreio or termo_cliente
+        return query_order(db_conn, order_id=numero_pedido, customer_query=cust_query)
 
     @tool
     def consultar_politicas(topico: str) -> str:

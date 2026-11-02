@@ -1,9 +1,91 @@
 import csv
+from decimal import Decimal, ROUND_HALF_UP
 import json
 import sqlite3
+import unicodedata
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 from src.config import settings
+
+class ProductList(list):
+    """Subclass of list that preserves total matching count before pagination/limit."""
+    def __init__(self, items: List[Any], total_count: int):
+        super().__init__(items)
+        self.total_count = total_count
+
+def normalize_text(text: Optional[str]) -> str:
+    """Removes diacritics/accents and converts to lowercase for resilient searches."""
+    if not text:
+        return ""
+    return "".join(c for c in unicodedata.normalize("NFD", text) if unicodedata.category(c) != "Mn").lower()
+
+def get_word_variants(word: str) -> List[str]:
+    """Generates Portuguese singular/plural variants for a search token."""
+    w = word.strip().lower()
+    variants = {w}
+    if w.endswith("ao"):
+        variants.add(w[:-2] + "oes")
+    elif w.endswith("oes"):
+        variants.add(w[:-3] + "ao")
+    if w.endswith("s") and len(w) > 3:
+        variants.add(w[:-1])
+    else:
+        variants.add(w + "s")
+    return list(variants)
+
+def calculate_pix_price(price: float, is_on_promotion: bool) -> Optional[float]:
+    """Calculates PIX price with 5% discount (manual §6.2: not cumulative with promotions)."""
+    if is_on_promotion:
+        return None
+    d = Decimal(str(price)) * Decimal("0.95")
+    return float(d.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
+
+def calculate_max_installments(price: float) -> Dict[str, Any]:
+    """Calculates max credit card installments and installment amount per store policy §3.1."""
+    if price < 50.0:
+        return {
+            "max_installments": 1,
+            "installment_value": round(price, 2),
+            "description": "1x sem juros (compras abaixo de R$ 50,00 não parcelam)"
+        }
+
+    # 7x to 12x: minimum installment R$ 100.00
+    for n in range(12, 6, -1):
+        v = price / n
+        if v >= 100.0:
+            val = round(v, 2)
+            return {
+                "max_installments": n,
+                "installment_value": val,
+                "description": f"{n}x de R$ {val:.2f} sem juros"
+            }
+
+    # 4x to 6x: minimum installment R$ 80.00
+    for n in range(6, 3, -1):
+        v = price / n
+        if v >= 80.0:
+            val = round(v, 2)
+            return {
+                "max_installments": n,
+                "installment_value": val,
+                "description": f"{n}x de R$ {val:.2f} sem juros"
+            }
+
+    # Up to 3x: no minimum installment (except purchase < R$ 50.00)
+    for n in range(3, 1, -1):
+        v = price / n
+        val = round(v, 2)
+        return {
+            "max_installments": n,
+            "installment_value": val,
+            "description": f"{n}x de R$ {val:.2f} sem juros"
+        }
+
+    return {
+        "max_installments": 1,
+        "installment_value": round(price, 2),
+        "description": "1x sem juros"
+    }
 
 def _find_data_file(data_dir: Path, pattern: str) -> Optional[Path]:
     """Finds a CSV file matching the pattern in data_dir."""
@@ -23,6 +105,7 @@ def init_database(data_dir: Optional[Path] = None) -> sqlite3.Connection:
 
     conn = sqlite3.connect(":memory:", check_same_thread=False)
     conn.row_factory = sqlite3.Row
+    conn.create_function("unaccent", 1, normalize_text)
     cursor = conn.cursor()
 
     # Create tables
@@ -131,15 +214,93 @@ def query_products(
     search_term: Optional[str] = None,
     category: Optional[str] = None,
     max_price: Optional[float] = None
-) -> List[Dict[str, Any]]:
-    """Queries products with optional search term, category filter, and price threshold."""
-    query = """
+) -> ProductList:
+    """Queries products with optional search term, category filter, and price threshold.
+    Returns a ProductList with total_count representing the actual number of matches.
+    """
+    base_where = "WHERE p.status = 'active'"
+    params: List[Any] = []
+
+    # Category filter
+    if category:
+        cat_norm = normalize_text(category)
+        base_where += " AND unaccent(c.name) LIKE ?"
+        params.append(f"%{cat_norm}%")
+
+    # Multi-keyword search
+    if search_term:
+        term_clean = normalize_text(search_term)
+        words = term_clean.split()
+        if words:
+            for w in words:
+                variants = get_word_variants(w)
+                w_clauses = []
+                for v in variants:
+                    w_clauses.append("(unaccent(p.name) LIKE ? OR unaccent(c.name) LIKE ?)")
+                    params.extend([f"%{v}%", f"%{v}%"])
+                base_where += " AND (" + " OR ".join(w_clauses) + ")"
+
+    # Price filter
+    if max_price is not None:
+        base_where += """
+            AND (
+                CASE 
+                    WHEN pr.is_active = 1 AND pr.discount_percent IS NOT NULL 
+                    THEN ROUND(p.price_brl * (1 - (pr.discount_percent / 100.0)), 2)
+                    ELSE p.price_brl 
+                END
+            ) <= ?
+        """
+        params.append(max_price)
+
+    cursor = conn.cursor()
+
+    # Total matching count (without LIMIT)
+    count_sql = f"""
+        SELECT COUNT(DISTINCT p.product_id)
+        FROM products p
+        LEFT JOIN categories c ON p.category_id = c.category_id
+        LEFT JOIN promotions pr ON p.product_id = pr.product_id AND pr.is_active = 1
+        {base_where}
+    """
+    cursor.execute(count_sql, params)
+    total_count = cursor.fetchone()[0]
+
+    # If primary search returned 0 and search_term was given, attempt fallback to description
+    if total_count == 0 and search_term:
+        desc_where = "WHERE p.status = 'active'"
+        desc_params: List[Any] = []
+        if category:
+            desc_where += " AND unaccent(c.name) LIKE ?"
+            desc_params.append(f"%{normalize_text(category)}%")
+        desc_where += " AND unaccent(p.description) LIKE ?"
+        desc_params.append(f"%{normalize_text(search_term)}%")
+        if max_price is not None:
+            desc_where += """
+                AND (
+                    CASE 
+                        WHEN pr.is_active = 1 AND pr.discount_percent IS NOT NULL 
+                        THEN ROUND(p.price_brl * (1 - (pr.discount_percent / 100.0)), 2)
+                        ELSE p.price_brl 
+                    END
+                ) <= ?
+            """
+            desc_params.append(max_price)
+        cursor.execute(f"SELECT COUNT(DISTINCT p.product_id) FROM products p LEFT JOIN categories c ON p.category_id = c.category_id LEFT JOIN promotions pr ON p.product_id = pr.product_id AND pr.is_active = 1 {desc_where}", desc_params)
+        desc_count = cursor.fetchone()[0]
+        if desc_count > 0:
+            base_where = desc_where
+            params = desc_params
+            total_count = desc_count
+
+    select_sql = f"""
         SELECT 
             p.product_id,
             p.name,
             p.price_brl AS original_price,
             c.name AS category_name,
             p.stock_quantity,
+            p.status,
             p.description,
             pr.discount_percent,
             CASE 
@@ -154,60 +315,100 @@ def query_products(
         FROM products p
         LEFT JOIN categories c ON p.category_id = c.category_id
         LEFT JOIN promotions pr ON p.product_id = pr.product_id AND pr.is_active = 1
-        WHERE p.status = 'active'
+        {base_where}
+        ORDER BY effective_price ASC
+        LIMIT 10
     """
-    params: List[Any] = []
-
-    if search_term:
-        query += " AND (p.name LIKE ? OR p.description LIKE ? OR c.name LIKE ?)"
-        term = f"%{search_term}%"
-        params.extend([term, term, term])
-
-    if category:
-        query += " AND c.name LIKE ?"
-        params.append(f"%{category}%")
-
-    if max_price is not None:
-        query += " AND (CASE WHEN pr.is_active = 1 AND pr.discount_percent IS NOT NULL THEN ROUND(p.price_brl * (1 - (pr.discount_percent / 100.0)), 2) ELSE p.price_brl END) <= ?"
-        params.append(max_price)
-
-    query += " ORDER BY effective_price ASC LIMIT 10"
-
-    cursor = conn.cursor()
-    cursor.execute(query, params)
+    cursor.execute(select_sql, params)
     rows = cursor.fetchall()
 
     results = []
     for r in rows:
+        orig = float(r["original_price"])
+        eff = float(r["effective_price"])
+        is_promo = bool(r["is_on_promotion"])
+        pix = calculate_pix_price(orig, is_promo)
+        inst = calculate_max_installments(eff)
+
         results.append({
             "product_id": r["product_id"],
             "name": r["name"],
             "category": r["category_name"],
-            "original_price": float(r["original_price"]),
-            "effective_price": float(r["effective_price"]),
-            "is_on_promotion": bool(r["is_on_promotion"]),
+            "original_price": orig,
+            "effective_price": eff,
+            "is_on_promotion": is_promo,
             "discount_percent": float(r["discount_percent"]) if r["discount_percent"] else 0.0,
+            "pix_price": pix,
+            "max_installments": inst["max_installments"],
+            "installment_value": inst["installment_value"],
+            "installment_text": inst["description"],
             "stock_quantity": int(r["stock_quantity"]),
+            "is_available": int(r["stock_quantity"]) > 0,
+            "availability": "Em estoque" if int(r["stock_quantity"]) > 0 else "Esgotado / Indisponível (estoque: 0)",
             "description": r["description"]
         })
-    return results
+
+    return ProductList(results, total_count=total_count)
 
 def query_product_details(conn: sqlite3.Connection, identifier: str) -> Optional[Dict[str, Any]]:
-    """Retrieves full product specifications and details by id or name."""
+    """Retrieves full product specifications and details by id or name, handling ambiguity and status."""
     cursor = conn.cursor()
+    ident_str = str(identifier).strip()
+
+    # 1. Try exact product_id lookup
+    if ident_str.isdigit():
+        query = """
+            SELECT p.*, c.name AS category_name, pr.discount_percent, pr.is_active AS promo_active
+            FROM products p
+            LEFT JOIN categories c ON p.category_id = c.category_id
+            LEFT JOIN promotions pr ON p.product_id = pr.product_id AND pr.is_active = 1
+            WHERE p.product_id = ?
+        """
+        cursor.execute(query, [int(ident_str)])
+        row = cursor.fetchone()
+        if row:
+            return _format_product_details_row(row)
+
+    # 2. Search by name with unaccent
+    ident_norm = normalize_text(ident_str)
     query = """
         SELECT p.*, c.name AS category_name, pr.discount_percent, pr.is_active AS promo_active
         FROM products p
         LEFT JOIN categories c ON p.category_id = c.category_id
         LEFT JOIN promotions pr ON p.product_id = pr.product_id AND pr.is_active = 1
-        WHERE (p.product_id = ? OR p.name LIKE ?)
-        LIMIT 1
+        WHERE unaccent(p.name) LIKE ?
     """
-    cursor.execute(query, [identifier, f"%{identifier}%"])
-    row = cursor.fetchone()
-    if not row:
+    cursor.execute(query, [f"%{ident_norm}%"])
+    matches = cursor.fetchall()
+
+    if not matches:
         return None
 
+    if len(matches) == 1:
+        return _format_product_details_row(matches[0])
+
+    # Check for exact name match among multiple matches
+    exact = [m for m in matches if normalize_text(m["name"]) == ident_norm]
+    if len(exact) == 1:
+        return _format_product_details_row(exact[0])
+
+    # Ambiguous match: return candidate list
+    return {
+        "status": "ambiguous",
+        "mensagem": f"A busca por '{identifier}' retornou múltiplos modelos ({len(matches)} encontrados). Por favor, informe o modelo exato.",
+        "candidatos": [
+            {
+                "product_id": m["product_id"],
+                "name": m["name"],
+                "price_brl": float(m["price_brl"]),
+                "status": m["status"]
+            }
+            for m in matches
+        ]
+    }
+
+def _format_product_details_row(row: sqlite3.Row) -> Dict[str, Any]:
+    """Helper to structure product details dictionary."""
     specs_parsed = {}
     if row["specs"]:
         try:
@@ -218,16 +419,38 @@ def query_product_details(conn: sqlite3.Connection, identifier: str) -> Optional
     original_price = float(row["price_brl"])
     discount = float(row["discount_percent"]) if row["promo_active"] and row["discount_percent"] else 0.0
     effective_price = round(original_price * (1 - (discount / 100.0)), 2) if discount > 0 else original_price
+    is_promo = discount > 0
+    pix = calculate_pix_price(original_price, is_promo)
+    inst = calculate_max_installments(effective_price)
+
+    status_raw = row["status"] or "active"
+    if status_raw == "discontinued":
+        status_label = "Produto Descontinuado (não faz mais parte do catálogo oficial)"
+        status_notice = "ATENÇÃO: Este modelo foi DESCONTINUADO. Conforme a política §7.3, informe ao cliente que ele saiu de linha e sugira alternativas equivalentes."
+    elif status_raw == "coming_soon":
+        status_label = "Em Breve / Lançamento Futuro"
+        status_notice = "ATENÇÃO: Este modelo está marcado como 'Em breve' e ainda não está liberado para venda imediata."
+    else:
+        status_label = "Ativo no catálogo"
+        status_notice = None
 
     return {
         "product_id": row["product_id"],
         "name": row["name"],
         "category": row["category_name"],
+        "status": status_raw,
+        "status_label": status_label,
+        "status_notice": status_notice,
         "original_price": original_price,
         "effective_price": effective_price,
         "discount_percent": discount,
-        "is_on_promotion": discount > 0,
+        "is_on_promotion": is_promo,
+        "pix_price": pix,
+        "max_installments": inst["max_installments"],
+        "installment_value": inst["installment_value"],
+        "installment_text": inst["description"],
         "stock_quantity": int(row["stock_quantity"]),
+        "is_available": int(row["stock_quantity"]) > 0 and status_raw == "active",
         "description": row["description"],
         "specs": specs_parsed
     }
@@ -236,50 +459,100 @@ def query_order(
     conn: sqlite3.Connection,
     order_id: Optional[int] = None,
     customer_query: Optional[str] = None
-) -> Optional[Dict[str, Any]]:
-    """Retrieves order details, tracking code and items by order_id or customer info."""
+) -> Dict[str, Any]:
+    """Retrieves order details enforcing LGPD privacy (§9).
+    Requires order_id + email/phone verification, or valid tracking code.
+    """
     cursor = conn.cursor()
-    query = """
-        SELECT o.*, c.name AS customer_name, c.email, c.phone, c.city
-        FROM orders o
-        JOIN customers c ON o.customer_id = c.customer_id
-        WHERE 1=1
-    """
-    params: List[Any] = []
+
+    # Case 1: Tracking code direct lookup
+    if customer_query and customer_query.startswith("BR") and customer_query.endswith("BR") and len(customer_query) >= 11:
+        cursor.execute("""
+            SELECT o.*, c.city
+            FROM orders o
+            JOIN customers c ON o.customer_id = c.customer_id
+            WHERE o.tracking_code = ?
+        """, [customer_query])
+        row = cursor.fetchone()
+        if not row:
+            return {"status": "not_found", "mensagem": f"Nenhum envio localizado com o código de rastreio '{customer_query}'."}
+        return {
+            "status": "success",
+            "tipo_consulta": "rastreamento",
+            "pedido": {
+                "order_id": row["order_id"],
+                "tracking_code": row["tracking_code"],
+                "status": row["status"],
+                "estimated_delivery": row["estimated_delivery"],
+                "notes": row["notes"]
+            }
+        }
+
+    # Case 2: order_id provided
     if order_id is not None:
-        query += " AND o.order_id = ?"
-        params.append(order_id)
-    elif customer_query:
-        query += " AND (c.name LIKE ? OR c.email LIKE ? OR c.phone LIKE ? OR o.tracking_code = ?)"
-        param_term = f"%{customer_query}%"
-        params.extend([param_term, param_term, param_term, customer_query])
-    else:
-        return None
+        cursor.execute("""
+            SELECT o.*, c.name AS customer_name, c.email, c.phone, c.city
+            FROM orders o
+            JOIN customers c ON o.customer_id = c.customer_id
+            WHERE o.order_id = ?
+        """, [order_id])
+        order_row = cursor.fetchone()
+        if not order_row:
+            return {"status": "not_found", "mensagem": f"Nenhum pedido encontrado com o número #{order_id}."}
 
-    query += " ORDER BY o.order_date DESC LIMIT 1"
-    cursor.execute(query, params)
-    order_row = cursor.fetchone()
-    if not order_row:
-        return None
+        # Verification required: customer must provide email or phone
+        if not customer_query:
+            return {
+                "status": "verification_required",
+                "mensagem": f"Por motivos de privacidade e conformidade com a LGPD (manual §9), para consultar os dados do pedido #{order_id} é necessário informar o e-mail ou telefone cadastrado na compra."
+            }
 
-    items_query = """
-        SELECT oi.quantity, p.name, p.price_brl
-        FROM order_items oi
-        JOIN products p ON oi.product_id = p.product_id
-        WHERE oi.order_id = ?
-    """
-    cursor.execute(items_query, [order_row["order_id"]])
-    item_rows = cursor.fetchall()
-    items = [{"product_name": ir["name"], "quantity": ir["quantity"], "unit_price": float(ir["price_brl"])} for ir in item_rows]
+        cust_query_norm = normalize_text(customer_query)
+        cust_email_norm = normalize_text(order_row["email"])
+        cust_phone_clean = "".join(filter(str.isdigit, str(order_row["phone"])))
+        query_phone_clean = "".join(filter(str.isdigit, customer_query))
 
+        is_verified = (
+            (cust_query_norm and cust_query_norm == cust_email_norm) or
+            (cust_phone_clean and len(query_phone_clean) >= 8 and query_phone_clean in cust_phone_clean)
+        )
+
+        if not is_verified:
+            # Crucial: NEVER reveal customer name or email on verification failure!
+            return {
+                "status": "verification_failed",
+                "mensagem": f"Os dados informados não conferem com o cadastro do pedido #{order_id}. Por favor, confirme o e-mail ou telefone exato cadastrado."
+            }
+
+        # Verification succeeded: return full details
+        cursor.execute("""
+            SELECT oi.quantity, p.name, p.price_brl
+            FROM order_items oi
+            JOIN products p ON oi.product_id = p.product_id
+            WHERE oi.order_id = ?
+        """, [order_row["order_id"]])
+        item_rows = cursor.fetchall()
+        items = [{"product_name": ir["name"], "quantity": ir["quantity"], "unit_price": float(ir["price_brl"])} for ir in item_rows]
+
+        return {
+            "status": "success",
+            "pedido": {
+                "order_id": order_row["order_id"],
+                "customer_name": order_row["customer_name"],
+                "order_date": order_row["order_date"],
+                "status": order_row["status"],
+                "total_brl": float(order_row["total_brl"]),
+                "payment_method": order_row["payment_method"],
+                "tracking_code": order_row["tracking_code"],
+                "estimated_delivery": order_row["estimated_delivery"],
+                "notes": order_row["notes"],
+                "items": items
+            }
+        }
+
+    # Case 3: Only customer name or generic text provided without order_id
     return {
-        "order_id": order_row["order_id"],
-        "customer_name": order_row["customer_name"],
-        "order_date": order_row["order_date"],
-        "status": order_row["status"],
-        "total_brl": float(order_row["total_brl"]),
-        "payment_method": order_row["payment_method"],
-        "tracking_code": order_row["tracking_code"],
-        "estimated_delivery": order_row["estimated_delivery"],
-        "items": items
+        "status": "verification_required",
+        "mensagem": "Por motivos de privacidade e conformidade com a LGPD (manual §9), não é permitido buscar pedidos apenas pelo primeiro nome. Por favor, informe o número do seu pedido e o e-mail cadastrado, ou o código de rastreamento completo."
     }
+

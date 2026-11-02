@@ -22,7 +22,12 @@ def test_consultar_detalhes_produto_tool(tools):
 
 def test_consultar_pedido_tool(tools):
     func = tools["consultar_pedido"]
-    res = func(numero_pedido=1)
+    # Without email -> verification required (privacy LGPD §9)
+    res_req = func(numero_pedido=1)
+    assert res_req["status"] == "verification_required"
+
+    # With correct email -> success
+    res = func(numero_pedido=1, email_ou_telefone="pedro.oliveira@jmail.com")
     assert res["status"] == "success"
     assert "pedido" in res
     assert res["pedido"]["order_id"] == 1
