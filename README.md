@@ -281,7 +281,7 @@ As encouraged by Artefact:
 ### The Workflow:
 - **Pair Programming Paradigm:** As an engineer with a strong background in **TypeScript, Node.js, and LangGraph.js**, I leveraged **Antigravity (powered by Gemini 3.8)** as a Senior Engineering Coach & Pair Programmer.
 - **Conceptual Transposition:** Rather than writing code blindly, the AI assisted in transposing mature architectural patterns from the TypeScript ecosystem (e.g., Zod schemas $\rightarrow$ Pydantic models; LangGraph.js state machines $\rightarrow$ LangGraph Python StateGraph; in-memory stores $\rightarrow$ native `sqlite3`).
-- **Atomic TDD Discipline:** Every module was developed using strict Test-Driven Development (failing test $\rightarrow$ minimal code $\rightarrow$ passing test $\rightarrow$ atomic semantic git commit).
+- **Test-Driven Specification & Comprehensive Automated Verification:** Test contracts and edge cases (pricing rules, privacy policies, catalog constraints) were designed upfront during the initial architectural specification phase. Tests were implemented alongside core domain modules, maintaining a strictly green test suite (20/20 unit tests + 55 behavioral evaluation runs) across every architectural evolution.
 - **Comprehensive Workflow Log:** A dedicated log is tracked at [`docs/ai_workflow_log.md`](docs/ai_workflow_log.md).
 
 ---
