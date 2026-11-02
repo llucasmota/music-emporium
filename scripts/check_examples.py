@@ -8,7 +8,7 @@ import re
 import sys
 from pathlib import Path
 from decimal import Decimal
-from src.database import init_database
+from src.database import init_database, calculate_max_installments
 
 def check_examples():
     conn = init_database()
@@ -42,6 +42,7 @@ def check_examples():
         re.compile(r"\b(já reservei|vou reservar|reservei para você|reservei o)\b", re.IGNORECASE),
         re.compile(r"\b(já emiti|emiti a etiqueta|geramos uma etiqueta|vou emitir a etiqueta)\b", re.IGNORECASE),
         re.compile(r"\b(já registrei sua reclamação|registrei seu protocolo de reclamação)\b", re.IGNORECASE),
+        re.compile(r"\b(posso iniciar|gerar o link|posso reservar)\b", re.IGNORECASE),
     ]
 
     for file_path in md_files:
@@ -130,25 +131,45 @@ def check_examples():
                                 break
                             block_lines.append(next_line)
                         window_text = "\n".join(block_lines)
+                        expected_price = float(p["price_brl"])
+                        expected_pix = round(expected_price * 0.95, 2)
+                        if p["discount_percent"]:
+                            expected_promo = round(expected_price * (1 - p["discount_percent"] / 100), 2)
+                            base_price = expected_promo
+                            valid_prices = [expected_price, expected_promo]
+                        else:
+                            base_price = expected_price
+                            valid_prices = [expected_price, expected_pix]
+
+                        inst_info = calculate_max_installments(base_price)
+                        expected_n = inst_info["max_installments"]
+                        expected_inst_val = inst_info["installment_value"]
+                        valid_prices.append(expected_inst_val)
+
+                        # Check explicit installment count and value: (\d+)x de R$ ...
+                        inst_matches = re.finditer(r"(\d+)x\s+de\s+R\$\s*([\d\.]+(?:,\d{2})?)", window_text, re.IGNORECASE)
+                        for im in inst_matches:
+                            found_n = int(im.group(1))
+                            found_inst_val = float(im.group(2).replace(".", "").replace(",", "."))
+                            if found_n != expected_n:
+                                divergences.append(
+                                    f"[{file_path.name}] Installment count mismatch for '{p_name}': found {found_n}x, expected {expected_n}x (calculated by §3.1)"
+                                )
+                            if abs(found_inst_val - expected_inst_val) > 0.15:
+                                divergences.append(
+                                    f"[{file_path.name}] Installment value mismatch for '{p_name}': found R$ {found_inst_val:.2f}, expected R$ {expected_inst_val:.2f}"
+                                )
+
+                        # Check that all mentioned prices match expected table, promo, PIX, or calculated max installment
                         price_matches = re.findall(r"R\$\s*([\d\.]+(?:,\d{2})?)", window_text)
                         for pm in price_matches:
                             price_str = pm.replace(".", "").replace(",", ".")
                             found_price = float(price_str)
-                            expected_price = float(p["price_brl"])
-                            expected_pix = round(expected_price * 0.95, 2)
-                            if p["discount_percent"]:
-                                expected_promo = round(expected_price * (1 - p["discount_percent"] / 100), 2)
-                                valid_prices = [expected_price, expected_promo]
-                            else:
-                                valid_prices = [expected_price, expected_pix, round(expected_price * 0.95, 2)]
-                            
-                            if found_price > 50.0:
-                                is_valid_price = any(abs(found_price - vp) < 0.15 for vp in valid_prices)
-                                is_valid_inst = any(abs(found_price - round(vp / n, 2)) < 0.15 for vp in valid_prices for n in range(2, 13))
-                                if not (is_valid_price or is_valid_inst):
-                                    divergences.append(
-                                        f"[{file_path.name}] Price mismatch for '{p_name}': found R$ {found_price:.2f}, not matching expected table, PIX or installment"
-                                    )
+                            is_valid_price = any(abs(found_price - vp) < 0.15 for vp in valid_prices)
+                            if not is_valid_price:
+                                divergences.append(
+                                    f"[{file_path.name}] Price mismatch for '{p_name}': found R$ {found_price:.2f}, not matching expected table, PIX or calculated max installment"
+                                )
 
     print("\n" + "=" * 60)
     if divergences:

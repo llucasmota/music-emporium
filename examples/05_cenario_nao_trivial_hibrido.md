@@ -4,28 +4,28 @@
 Olá! Fiz uma compra online com vocês (Pedido 1) e gostaria de solicitar a devolução por arrependimento. Meu e-mail é pedro.oliveira@jmail.com.
 
 **Atendente (Empório da Música):**
-Pedro, conversando pelo nosso sistema, vejo que o seu pedido do violão Martin D-28 foi entregue há mais de um ano, em outubro de 2025. 
+Pedro, o seu pedido foi entregue há mais de um ano (em outubro de 2025). Por conta disso, o prazo de 7 dias corridos para a devolução por arrependimento em compras online já se encerrou.
 
-Como o prazo legal de 7 dias corridos para o arrependimento de compras online já passou, infelizmente não temos como realizar a devolução ou reembolso dessa compra. 
+Como a nossa ferramenta não consegue iniciar esse processo de devolução automática para pedidos fora do prazo, você pode entrar em contato diretamente pelo nosso WhatsApp humano em (67) 3321-4500 para verificar se há alguma exceção ou orientação especial da gerência. 
 
-Posso te ajudar com alguma outra dúvida sobre nossos instrumentos ou sobre a manutenção do seu violão?
-
-**Cliente:**
-Poxa, que decepção! O violão começou a apresentar problemas e eu esperava mais consideração. Quero registrar uma reclamação formal sobre isso!
-
-**Atendente (Empório da Música):**
-Compreendo perfeitamente a sua frustração com a situação do instrumento, Pedro. 
-
-Registrei a sua reclamação sob o protocolo **REC-20261102-0001**. Nossa equipe de atendimento vai analisar o seu caso com atenção e entrará em contato com você em até 24 horas úteis. 
-
-Se preferir falar diretamente com nossa equipe, você também pode nos ligar ou chamar no WhatsApp pelo número (67) 3321-4500.
+Posso te ajudar com alguma outra dúvida sobre nossos instrumentos musicais hoje?
 
 **Cliente:**
-O braço do violão Martin D-28 apresentou empenamento severo. Pode registrar a queixa para o meu e-mail pedro.oliveira@jmail.com referente ao pedido 1.
+Poxa, que decepção! O braço do violão Martin D-28 apresentou empenamento severo e eu esperava mais consideração. Quero registrar uma reclamação formal sobre isso!
 
 **Atendente (Empório da Música):**
-Puxa vida, sinto muito por esse problema com o braço do seu Martin D-28, Pedro. Questões estruturais em instrumentos assim são realmente muito chatas.
+Entendo perfeitamente a sua frustração com essa situação no seu instrumento, Pedro. 
 
-Já registrei essa nova queixa com o detalhe do empenamento sob o protocolo **REC-20261102-0002**. Nossa equipe vai analisar a situação e entrará em contato em até 24 horas úteis pelo seu e-mail ou pelo telefone (67) 3321-4500. 
+Acabei de registrar a sua reclamação formal no nosso sistema sob o protocolo **REC-20261102-0001**. O nosso setor responsável vai analisar o seu caso e entrar em contato em até **24 horas úteis**. 
 
-Tem mais alguma dúvida ou posso te ajudar com algo mais neste atendimento?
+Se preferir acelerar o atendimento ou conversar com nossa equipe, você também pode chamar diretamente no WhatsApp (67) 3321-4500. Posso te ajudar com algo mais neste momento?
+
+**Cliente:**
+E o que eu faço com o violão?
+
+**Atendente (Empório da Música):**
+Como a compra já passou do prazo da garantia legal e da loja, o ideal é verificar diretamente com o suporte do fabricante Martin Guitars ou com uma luthieria especializada de sua confiança para avaliar o braço do instrumento. 
+
+Além disso, nossa equipe responsável já está ciente pelo protocolo registrado e poderá te orientar melhor sobre isso no retorno de até 24 horas úteis. 
+
+Posso te auxiliar com mais alguma informação sobre nossos instrumentos?

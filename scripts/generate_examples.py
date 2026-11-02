@@ -46,8 +46,8 @@ SCENARIOS = [
         "title": "05: Cenário Não-Trivial Híbrido (Prazos de Devolução/Garantia e Registro de Reclamação Formal)",
         "turns": [
             "Olá! Fiz uma compra online com vocês (Pedido 1) e gostaria de solicitar a devolução por arrependimento. Meu e-mail é pedro.oliveira@jmail.com.",
-            "Poxa, que decepção! O violão começou a apresentar problemas e eu esperava mais consideração. Quero registrar uma reclamação formal sobre isso!",
-            "O braço do violão Martin D-28 apresentou empenamento severo. Pode registrar a queixa para o meu e-mail pedro.oliveira@jmail.com referente ao pedido 1."
+            "Poxa, que decepção! O braço do violão Martin D-28 apresentou empenamento severo e eu esperava mais consideração. Quero registrar uma reclamação formal sobre isso!",
+            "E o que eu faço com o violão?"
         ]
     }
 ]
@@ -56,7 +56,15 @@ def generate():
     examples_dir = Path("examples")
     examples_dir.mkdir(exist_ok=True)
     
-    for sc in SCENARIOS:
+    selected_args = sys.argv[1:]
+    target_scenarios = SCENARIOS
+    if selected_args:
+        target_scenarios = [
+            sc for sc in SCENARIOS
+            if any(arg in sc["filename"] for arg in selected_args)
+        ]
+    
+    for sc in target_scenarios:
         print(f"\n🎵 Generating {sc['filename']}...")
         agent = MusicStoreAgent()
         for turn_idx, user_msg in enumerate(sc["turns"], 1):
@@ -69,7 +77,7 @@ def generate():
         out_file.write_text(md_text, encoding="utf-8")
         print(f"  ✔ Saved {out_file}")
 
-    print("\n✅ All 5 examples successfully generated!")
+    print(f"\n✅ Generated {len(target_scenarios)} examples successfully!")
 
 if __name__ == "__main__":
     generate()

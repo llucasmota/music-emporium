@@ -259,7 +259,7 @@ The repository contains recorded end-to-end interactions covering both standard 
 2. 📄 [`examples/02_informacoes_loja_e_horarios.md`](examples/02_informacoes_loja_e_horarios.md): Physical store location (Rua 14 de Maio, 3200), national holiday closure notice for Finados (§2), and standard operating hours.
 3. 📄 [`examples/03_status_e_rastreio_pedido.md`](examples/03_status_e_rastreio_pedido.md): Order lookup with LGPD verification (order ID #4 + customer email), returning delivery status and courier tracking code.
 4. 📄 [`examples/04_fora_de_escopo_acessorios.md`](examples/04_fora_de_escopo_acessorios.md): Inquiries for strings, picks, and general knowledge (Moon landing), demonstrating scope boundaries and polite referral to local partners.
-5. 📄 [`examples/05_cenario_nao_trivial_hibrido.md`](examples/05_cenario_nao_trivial_hibrido.md): **Non-trivial scenario**: Customer requesting return of historical Order #1 (Martin D-28) after expiration of the 7-day online repentance window, explanation of manufacturer warranty (§8.2), and registration of a formal customer complaint with sequential protocol (`REC-20261102-0001`) and 24-business-hour return time (§7.3).
+5. 📄 [`examples/05_cenario_nao_trivial_hibrido.md`](examples/05_cenario_nao_trivial_hibrido.md): **Non-trivial scenario**: Customer requesting return of historical Order #1 (Martin D-28) after expiration of the 7-day online repentance window, formal complaint registration with a single sequential protocol (`REC-20261102-0001`) and 24-business-hour SLA (§7.3), followed by practical guidance on manufacturer warranty and specialized luthier support for severe neck warping (§8.2).
 
 ---
 
@@ -333,9 +333,9 @@ During data audit and ingestion across the store CSV files and the policy manual
     - *Decision:* Dynamic `America/Campo_Grande` time is injected for store open/closed status, while order status is reported faithfully from database records.
 12. **Estimated Delivery Date as Receipt Reference:**
     - *Discrepancy:* `orders.csv` does not have a separate `actual_delivery_date` column for completed shipments.
-    - *Decision:* `estimated_delivery` is used as the receipt reference date for calculating the 7-day online repentance window (§4.1), 30-day defective return window (§4.2), and 90-day legal warranty (§8.1) relative to the current `America/Campo_Grande` clock.
+    - *Decision:* `estimated_delivery` is used as the receipt reference date for calculating the 7-day online repentance window (§4.1), 30-day defective exchange window (§4.2), and 90-day legal warranty (§8.1) relative to the current `America/Campo_Grande` clock. Defective exchange eligibility (§4.2) is thus counted from delivery date as an operational approximation.
 13. **Fixed National Holidays Calendar (2026–2027):**
-    - *Assumption:* Store hours (§2: "Domingos e Feriados: Fechado") evaluate Brazilian national holidays for 2026 and 2027 via a fixed calendar module without external dependencies. Municipal holidays of Campo Grande (e.g., August 26) are documented as future roadmap.
+    - *Assumption:* Store hours (§2: "Domingos e Feriados: Fechado") evaluate Brazilian national holidays for 2026 and 2027 via a fixed calendar module without external dependencies. Carnaval and Corpus Christi are treated as closed in the calendar, reflecting standard retail observance despite legally being optional holidays (*pontos facultativos*). Municipal holidays of Campo Grande (e.g., August 26) are documented as future roadmap.
 14. **Public Courier Tracking Code Access:**
     - *Assumption:* Per courier standards (Correios, Jadlog), searching directly by tracking code (`BR...`) returns shipment status without customer identity verification, while `order_id` queries require email or phone confirmation to protect customer privacy under LGPD (§9).
 15. **In-Memory Complaint Registration:**
