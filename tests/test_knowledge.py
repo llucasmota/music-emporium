@@ -33,3 +33,15 @@ def test_get_policy_returns_accurate_terms():
 def test_store_summary_includes_crucial_guardrails():
     summary = get_store_policy_summary()
     assert "não comercializamos acessórios" in summary.lower() or "exclusivamente com instrumentos" in summary.lower()
+
+def test_load_policies_directly_from_pdf():
+    from src.knowledge import load_policies_from_pdf, POLICIES
+    policies = load_policies_from_pdf()
+    assert len(policies) == 10
+    assert "sobre_a_loja" in policies
+    assert "trocas_devolucoes" in policies
+    assert "disposicoes_finais" in policies
+    # Confirm verbatim PDF content without transcription drift
+    assert "reembolso na hora" not in policies["trocas_devolucoes"].lower()
+    assert "diferenças de valor serão cobradas ou reembolsadas conforme o caso" in policies["trocas_devolucoes"].lower()
+

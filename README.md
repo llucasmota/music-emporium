@@ -231,13 +231,14 @@ tests/test_database.py::test_block_3_complaints_table_and_registration PASSED
 tests/test_knowledge.py::test_available_topics PASSED
 tests/test_knowledge.py::test_get_policy_returns_accurate_terms PASSED
 tests/test_knowledge.py::test_store_summary_includes_crucial_guardrails PASSED
+tests/test_knowledge.py::test_load_policies_directly_from_pdf PASSED
 tests/test_prompt.py::test_system_prompt_contains_crucial_elements PASSED
 tests/test_tools.py::test_buscar_produtos_tool PASSED
 tests/test_tools.py::test_consultar_detalhes_produto_tool PASSED
 tests/test_tools.py::test_consultar_pedido_tool PASSED
 tests/test_tools.py::test_consultar_politicas_tool PASSED
 tests/test_tools.py::test_registrar_reclamacao_tool PASSED
-============================== 25 passed in 0.55s ==============================
+============================== 26 passed in 0.85s ==============================
 ```
 
 ### Conversational Verification & Smoke Tests
@@ -271,7 +272,7 @@ As encouraged by Artefact:
 ### The Workflow:
 - **Pair Programming Paradigm:** As an engineer with a strong background in **TypeScript, Node.js, and LangGraph.js**, I leveraged **Antigravity (powered by Gemini 3.8)** as a Senior Engineering Coach & Pair Programmer.
 - **Conceptual Transposition:** Rather than writing code blindly, the AI assisted in transposing mature architectural patterns from the TypeScript ecosystem (e.g., Zod schemas $\rightarrow$ Pydantic models; LangGraph.js state machines $\rightarrow$ LangGraph Python StateGraph; in-memory stores $\rightarrow$ native `sqlite3`).
-- **Test-Driven Specification & Comprehensive Automated Verification:** Test contracts and edge cases (pricing rules, privacy policies, catalog constraints) were designed upfront during the initial architectural specification phase. Tests were implemented alongside core domain modules, maintaining a consistently passing test suite (25 unit tests) across architectural iterations.
+- **Test-Driven Specification & Comprehensive Automated Verification:** Test contracts and edge cases (pricing rules, privacy policies, catalog constraints) were designed upfront during the initial architectural specification phase. Tests were implemented alongside core domain modules, maintaining a consistently passing test suite (26 unit tests) across architectural iterations.
 - **Comprehensive Workflow Log:** A dedicated log is tracked at [`docs/ai_workflow_log.md`](docs/ai_workflow_log.md).
 
 ---
@@ -355,7 +356,7 @@ music-emporium/
 │   ├── calendar_utils.py                # Brazilian national holidays & store hours engine
 │   ├── config.py                        # Pydantic settings & environment validation
 │   ├── database.py                      # SQLite in-memory store & parameterized queries
-│   ├── knowledge.py                     # In-context structured store policy engine
+│   ├── knowledge.py                     # Direct PDF policy ingestion (pypdf) & structured semantic engine
 │   ├── prompt.py                        # System prompt with musical persona & guardrails
 │   ├── tools.py                         # Typed agent tool declarations
 │   └── agent.py                         # Decoupled MusicStoreAgent engine
