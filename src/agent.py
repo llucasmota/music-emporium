@@ -40,7 +40,8 @@ class MusicStoreAgent:
     def _build_graph(self):
         """Constructs the LangGraph StateGraph: START -> agent -> tools_condition -> tools -> agent -> END."""
         def call_model(state: MessagesState):
-            messages = [SystemMessage(content=self.system_prompt)] + state["messages"]
+            current_prompt = format_system_prompt()
+            messages = [SystemMessage(content=current_prompt)] + state["messages"]
             response = self.model_with_tools.invoke(messages)
             return {"messages": [response]}
 
@@ -89,6 +90,7 @@ class MusicStoreAgent:
             return reply_text
 
         except Exception as e:
+            logger.exception("Error during agent processing: %s", e)
             if settings.debug_mode:
                 return f"[DEBUG EXCEPTION]: {str(e)}"
             return "Ops! Parece que o nosso cabo deu um mau contato aqui na linha. 🎸 Me manda essa mensagem de novo em um minutinho pra gente afinar a conversa?"
