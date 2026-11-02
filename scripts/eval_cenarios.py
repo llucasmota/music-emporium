@@ -163,11 +163,8 @@ def run_eval(runs_per_scenario: int = 5):
             elapsed = time.time() - t0
             latencies.append(elapsed)
 
-            # Extract tool names from agent history
-            tool_names = []
-            for msg in agent.history:
-                if msg.get("role") == "tool":
-                    tool_names.append(msg.get("name", ""))
+            # Extract tool names directly from agent execution
+            tool_names = agent.last_tool_calls
 
             ok = sc["checker"](response, tool_names)
             if ok:

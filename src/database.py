@@ -292,6 +292,24 @@ def query_products(
             base_where = desc_where
             params = desc_params
             total_count = desc_count
+        else:
+            # Check if matching products exist in non-active status (e.g., discontinued or coming_soon)
+            status_where = "WHERE 1=1"
+            status_params: List[Any] = []
+            words = normalize_text(search_term).split()
+            if words:
+                for w in words:
+                    variants = get_word_variants(w)
+                    w_clauses = ["(unaccent(p.name) LIKE ? OR unaccent(c.name) LIKE ?)" for _ in variants]
+                    for v in variants:
+                        status_params.extend([f"%{v}%", f"%{v}%"])
+                    status_where += " AND (" + " OR ".join(w_clauses) + ")"
+                cursor.execute(f"SELECT COUNT(DISTINCT p.product_id) FROM products p LEFT JOIN categories c ON p.category_id = c.category_id LEFT JOIN promotions pr ON p.product_id = pr.product_id {status_where}", status_params)
+                status_count = cursor.fetchone()[0]
+                if status_count > 0:
+                    base_where = status_where
+                    params = status_params
+                    total_count = status_count
 
     select_sql = f"""
         SELECT 
@@ -343,8 +361,9 @@ def query_products(
             "installment_value": inst["installment_value"],
             "installment_text": inst["description"],
             "stock_quantity": int(r["stock_quantity"]),
-            "is_available": int(r["stock_quantity"]) > 0,
-            "availability": "Em estoque" if int(r["stock_quantity"]) > 0 else "Esgotado / Indisponível (estoque: 0)",
+            "status": r["status"],
+            "is_available": int(r["stock_quantity"]) > 0 and r["status"] == "active",
+            "availability": "Em estoque" if (int(r["stock_quantity"]) > 0 and r["status"] == "active") else ("Descontinuado pelo fabricante" if r["status"] == "discontinued" else ("Em breve / Lançamento futuro" if r["status"] == "coming_soon" else "Esgotado / Indisponível (estoque: 0)")),
             "description": r["description"]
         })
 

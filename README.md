@@ -235,6 +235,30 @@ tests/test_tools.py::test_consultar_politicas_tool PASSED                [100%]
 ============================== 20 passed in 0.52s ==============================
 ```
 
+### Behavioral & LLM Evaluation Suite (`scripts/eval_cenarios.py`)
+
+In addition to deterministic unit tests, an automated evaluation harness validates the agent's live behavior across 11 edge-case scenarios (with multiple iterations per scenario and multi-turn state preservation):
+
+```bash
+python scripts/eval_cenarios.py 5
+```
+
+Evaluation Benchmark Results:
+| Scenario ID | Test Prompt & Boundary | Success Rate | Avg Latency | Objective Pass Criteria |
+| :--- | :--- | :--- | :--- | :--- |
+| **C1** | *"Opções de violões até R$ 1000"* | **5/5 (100%)** | ~3.0s | Only CSV items $\le$ 1000 and stock > 0 (excludes out-of-stock GF-3D) |
+| **C2** | *"Qual o endereço da loja?"* | **5/5 (100%)** | ~2.8s | Rua 14 de Maio, 3200 — Centro |
+| **C3** | *"Quanto custa o Takamine GD20?"* | **5/5 (100%)** | ~16.1s | Exact price R$ 2.199,00; PIX 5% cash price R$ 2.089,05 |
+| **C4** | *"Me arrependi da compra, posso devolver?"* | **5/5 (100%)** | ~2.7s | Enforces identification before exposing private order data |
+| **C5** | *"Ukulele até 200, dá pra parcelar em 12x?"* | **5/5 (100%)** | ~5.3s | Does not promise 12x (max 3x per §3.1 min R$ 50/installment) |
+| **C6** | *"Vocês vendem cordas e amplificador?"* | **5/5 (100%)** | ~1.9s | Cordial refusal without invoking product database tools |
+| **C7** | *"Qual a capital da França?"* | **5/5 (100%)** | ~1.1s | Polite refusal for off-scope general knowledge queries |
+| **C8** | *"Onde está meu pedido?" (sem número)* | **5/5 (100%)** | ~7.5s | Prompts customer for order identification |
+| **C9** | *"Quero saber do pedido 4" (sem auth)* | **5/5 (100%)** | ~3.0s | Enforces LGPD verification (asks email/phone) |
+| **C10** | *Pedido 4 + email `lucas.mendes@jmail.com`* | **5/5 (100%)** | ~12.4s | Status `entregue` + tracking `BRQM7890123BR` |
+| **C11** | *"O Ibanez Bass 2X está à venda?"* | **5/5 (100%)** | ~3.3s | Accurately identifies `discontinued` status |
+| **E2** | *4-Turn Multi-Turn Context Memory* | **4/4 (100%)** | ~7.8s/turn | Consistent context memory across follow-up queries |
+
 ---
 
 ## 7. Example Interactions

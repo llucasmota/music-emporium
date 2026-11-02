@@ -25,6 +25,7 @@ class MusicStoreAgent:
         self.thread_id = str(uuid.uuid4())
         self.memory = MemorySaver()
         self.history: List[Dict[str, Any]] = []
+        self.last_tool_calls: List[str] = []
 
         if self.api_key and self.api_key != "fake-key":
             self.llm = ChatGoogleGenerativeAI(
@@ -79,6 +80,15 @@ class MusicStoreAgent:
             inputs = {"messages": [HumanMessage(content=user_message)]}
 
             output = self.graph.invoke(inputs, config=config)
+            
+            # Record executed tool calls
+            self.last_tool_calls = [
+                tc["name"]
+                for msg in output.get("messages", [])
+                if hasattr(msg, "tool_calls")
+                for tc in getattr(msg, "tool_calls", [])
+            ]
+
             final_message = output["messages"][-1]
             reply_text = final_message.content
 
