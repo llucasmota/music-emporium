@@ -1,7 +1,7 @@
 import sqlite3
 from typing import Any, Callable, Dict, List, Optional
 from langchain_core.tools import tool
-from src.database import query_products, query_product_details, query_order
+from src.database import query_products, query_product_details, query_order, register_complaint
 from src.knowledge import get_policy_topic, AVAILABLE_POLICY_TOPICS
 
 def create_langchain_tools(db_conn: sqlite3.Connection) -> List[Any]:
@@ -92,7 +92,25 @@ def create_langchain_tools(db_conn: sqlite3.Connection) -> List[Any]:
         """
         return get_policy_topic(topico)
 
-    return [buscar_produtos, consultar_detalhes_produto, consultar_pedido, consultar_politicas]
+    @tool
+    def registrar_reclamacao(
+        resumo: str,
+        email: str,
+        numero_pedido: Optional[int] = None
+    ) -> Dict[str, Any]:
+        """Registra formalmente uma reclamação de cliente no sistema de atendimento (§7.3).
+        
+        Args:
+            resumo: Descrição detalhada do problema ou motivo da queixa (mínimo de 10 caracteres).
+            email: E-mail válido do cliente para contato e retorno.
+            numero_pedido: Número do pedido relacionado, se houver (opcional).
+            
+        Returns:
+            Dicionário com status do registro, protocolo gerado (REC-AAAAMMDD-NNNN), prazo oficial de retorno de 24 horas úteis e canal humano.
+        """
+        return register_complaint(db_conn, resumo=resumo, email=email, numero_pedido=numero_pedido)
+
+    return [buscar_produtos, consultar_detalhes_produto, consultar_pedido, consultar_politicas, registrar_reclamacao]
 
 def create_tool_registry(db_conn: sqlite3.Connection) -> Dict[str, Callable[..., Any]]:
     """Creates a dictionary of callable tool functions for direct invocation or testing."""

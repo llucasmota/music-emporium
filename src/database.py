@@ -2,6 +2,7 @@ import csv
 from datetime import datetime, date
 from decimal import Decimal, ROUND_HALF_UP
 import json
+import re
 import sqlite3
 import unicodedata
 from pathlib import Path
@@ -177,6 +178,19 @@ def init_database(data_dir: Optional[Path] = None) -> sqlite3.Connection:
             product_id INTEGER NOT NULL,
             FOREIGN KEY (order_id) REFERENCES orders (order_id),
             FOREIGN KEY (product_id) REFERENCES products (product_id)
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE complaints (
+            protocolo TEXT PRIMARY KEY,
+            criado_em TEXT NOT NULL,
+            email TEXT NOT NULL,
+            order_id INTEGER,
+            resumo TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'open'
+                CHECK (status IN ('open', 'reviewing', 'resolved')),
+            FOREIGN KEY (order_id) REFERENCES orders (order_id)
         )
     """)
 
@@ -636,4 +650,73 @@ def query_order(
         "status": "verification_required",
         "mensagem": "Por motivos de privacidade e conformidade com a LGPD (manual §9), não é permitido buscar pedidos apenas pelo primeiro nome. Por favor, informe o número do seu pedido e o e-mail cadastrado, ou o código de rastreamento completo."
     }
+
+def register_complaint(
+    conn: sqlite3.Connection,
+    resumo: str,
+    email: str,
+    numero_pedido: Optional[int] = None,
+    current_time: Optional[datetime] = None
+) -> Dict[str, Any]:
+    """Registers a formal complaint into the in-memory complaints table (§7.3)."""
+    cursor = conn.cursor()
+    missing: List[str] = []
+
+    resumo_clean = (resumo or "").strip()
+    if len(resumo_clean) < 10:
+        missing.append("resumo (mínimo 10 caracteres)")
+
+    email_clean = (email or "").strip()
+    email_pattern = r"^[^@\s]+@[^@\s]+\.[^@\s]+$"
+    if not email_clean or not re.match(email_pattern, email_clean):
+        missing.append("e-mail válido")
+
+    if missing:
+        return {
+            "status": "dados_insuficientes",
+            "faltando": missing,
+            "mensagem": f"Para registrar a reclamação é necessário fornecer: {', '.join(missing)}."
+        }
+
+    if numero_pedido is not None:
+        cursor.execute("SELECT 1 FROM orders WHERE order_id = ?", [numero_pedido])
+        if not cursor.fetchone():
+            return {
+                "status": "pedido_nao_encontrado",
+                "mensagem": f"O pedido #{numero_pedido} não foi encontrado no sistema."
+            }
+
+    try:
+        now_cg = current_time or datetime.now(ZoneInfo("America/Campo_Grande"))
+    except Exception:
+        now_cg = current_time or datetime.now()
+
+    date_str = now_cg.strftime("%Y%m%d")
+    prefix = f"REC-{date_str}-"
+
+    cursor.execute("SELECT protocolo FROM complaints WHERE protocolo LIKE ? ORDER BY protocolo DESC LIMIT 1", [f"{prefix}%"])
+    last_row = cursor.fetchone()
+    if last_row and last_row[0]:
+        last_seq = int(last_row[0].split("-")[-1])
+        next_seq = last_seq + 1
+    else:
+        next_seq = 1
+
+    protocolo = f"{prefix}{next_seq:04d}"
+    criado_em = now_cg.isoformat()
+
+    cursor.execute("""
+        INSERT INTO complaints (protocolo, criado_em, email, order_id, resumo, status)
+        VALUES (?, ?, ?, ?, ?, 'open')
+    """, [protocolo, criado_em, email_clean, numero_pedido, resumo_clean])
+    conn.commit()
+
+    return {
+        "status": "registrada",
+        "protocolo": protocolo,
+        "prazo_retorno": "24 horas úteis",
+        "canal_humano": "(67) 3321-4500",
+        "mensagem": f"Reclamação registrada com sucesso sob o protocolo {protocolo}. O prazo de retorno é de 24 horas úteis pelo canal (67) 3321-4500."
+    }
+
 

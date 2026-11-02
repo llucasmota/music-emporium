@@ -45,3 +45,12 @@ def test_consultar_politicas_tool(tools):
     res = func(topico="frete_entregas")
     assert "Campo Grande" in res
     assert "Frete grátis" in res
+
+def test_registrar_reclamacao_tool(tools):
+    assert "registrar_reclamacao" in tools
+    func = tools["registrar_reclamacao"]
+    res = func(resumo="Reclamação de teste pelo tool registry", email="cliente@jmail.com", numero_pedido=1)
+    assert res["status"] == "registrada"
+    assert "protocolo" in res
+    assert res["prazo_retorno"] == "24 horas úteis"
+

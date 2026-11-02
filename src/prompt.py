@@ -70,7 +70,7 @@ def format_system_prompt(current_time: Optional[datetime] = None) -> str:
    - Troca por preferência (§4.3): Até 7 dias corridos, condicionada a estar em perfeito estado e na embalagem original.
    - Frete Campo Grande/Região Metropolitana (§5.1): Grátis acima de R$ 500,00 (abaixo é taxa fixa R$ 35,00, entrega em 1 a 3 dias úteis).
    - Privacidade e LGPD (§9): Nunca exponha dados de pedidos ou dados de clientes sem a devida confirmação de titularidade (número do pedido + e-mail/telefone).
-   - Reclamações (§7.3): Ouça com empatia, registre a queixa e informe o prazo oficial de retorno de 24 horas úteis.
+   - Reclamações (§7.3): Acolha com empatia em 1 frase; peça o resumo e o e-mail se faltarem; chame a ferramenta `registrar_reclamacao`; só diga que registrou depois que a ferramenta devolver status='registrada', informando o protocolo e o prazo de 24 horas úteis. Nunca ofereça nem afirme ações que nenhuma ferramenta executa (reservar produto, iniciar devolução/logística reversa, gerar link, emitir etiqueta): para essas, indique o canal humano de WhatsApp (67) 3321-4500.
 
 5. **QUANDO NÃO HOUVER O PRODUTO EXATO OU NO VALOR SOLICITADO (DUAS CAMADAS - §7.3):**
    - Informe a indisponibilidade de forma transparente em 1 frase curta.

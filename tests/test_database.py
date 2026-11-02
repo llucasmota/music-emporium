@@ -188,5 +188,43 @@ def test_block_2b_order_return_eligibility_and_phone_validation(db):
     res_ok = query_order(db, order_id=4, customer_query="998123456")
     assert res_ok["status"] == "success"
 
+def test_block_3_complaints_table_and_registration(db):
+    """Block 3: Complaint registration, sequential protocol, validation, and status constraints."""
+    import sqlite3
+    from src.database import register_complaint
+
+    # 1. Valid registration
+    r1 = register_complaint(db, resumo="Instrumento com tarraxa quebrada", email="cliente@jmail.com", numero_pedido=1)
+    assert r1["status"] == "registrada"
+    assert r1["protocolo"].endswith("-0001")
+    assert r1["prazo_retorno"] == "24 horas úteis"
+    assert r1["canal_humano"] == "(67) 3321-4500"
+
+    # 2. Second registration in same day -> 0002
+    r2 = register_complaint(db, resumo="Segunda queixa sobre prazo de entrega", email="cliente@jmail.com")
+    assert r2["status"] == "registrada"
+    assert r2["protocolo"].endswith("-0002")
+
+    # 3. Invalid email -> dados_insuficientes without insert
+    r_bad_email = register_complaint(db, resumo="Texto longo sem email valido", email="invalido_sem_arroba")
+    assert r_bad_email["status"] == "dados_insuficientes"
+
+    # 4. Short summary (< 10 chars)
+    r_short = register_complaint(db, resumo="Curto", email="cliente@jmail.com")
+    assert r_short["status"] == "dados_insuficientes"
+
+    # 5. Non-existent order (999) -> pedido_nao_encontrado
+    r_bad_order = register_complaint(db, resumo="Pedido que nao existe no banco", email="cliente@jmail.com", numero_pedido=999)
+    assert r_bad_order["status"] == "pedido_nao_encontrado"
+
+    # 6. Direct INSERT with invalid status -> IntegrityError
+    with pytest.raises(sqlite3.IntegrityError):
+        cursor = db.cursor()
+        cursor.execute("""
+            INSERT INTO complaints (protocolo, criado_em, email, order_id, resumo, status)
+            VALUES ('REC-TEST-9999', '2026-11-02T10:00:00', 'a@b.com', NULL, 'teste integridade', 'closed')
+        """)
+
+
 
 
