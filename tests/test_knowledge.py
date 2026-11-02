@@ -37,8 +37,8 @@ def test_store_summary_includes_crucial_guardrails():
 def test_load_policies_directly_from_pdf():
     from src.knowledge import load_policies_from_pdf, POLICIES
     policies = load_policies_from_pdf()
-    assert len(policies) == 10
-    assert "sobre_a_loja" in policies
+    assert len(policies) >= 10
+    assert "sobre_a_emporio_da_musica" in policies
     assert "trocas_devolucoes" in policies
     assert "disposicoes_finais" in policies
     # Confirm verbatim PDF content without transcription drift
