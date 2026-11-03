@@ -8,6 +8,12 @@ import re
 import sys
 from pathlib import Path
 from decimal import Decimal
+
+# Ensure repository root is on sys.path when executed directly
+ROOT_DIR = Path(__file__).resolve().parent.parent
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
+
 from src.database import init_database, calculate_max_installments
 
 def check_examples():

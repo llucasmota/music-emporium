@@ -16,9 +16,9 @@
 
 **Empório da Música** is a traditional musical instruments store founded in 2008 in **Campo Grande, Mato Grosso do Sul**. While the store takes pride in its warm, community-driven reputation (*"Sua música começa aqui"*), the customer service team is currently overwhelmed by high volumes of recurring inquiries via WhatsApp: opening hours, catalog pricing, order tracking, real-time stock availability, and return/warranty policies.
 
-This project delivers an autonomous, production-grade **AI Customer Service Agent in Python**, capable of:
+This project delivers an **AI Customer Service Agent Prototype in Python**, capable of:
 1. **Embodying the Store Persona:** Informal, friendly, technically knowledgeable, and genuinely enthusiastic about music ("an experienced musician friend behind the counter").
-2. **Context-Aware Dynamic Routing:** Deterministically querying operational databases (stock, specs, prices, order status) and store policies (7-day online repentance, warranties, payment terms) using typed tool-calling.
+2. **Context-Aware Dynamic Routing:** Querying operational databases (stock, specs, prices, order status) and store policies (7-day online repentance, warranties, payment terms) using typed tool-calling.
 3. **Firm Business Boundary Guardrails:** Firmly and politely declining out-of-scope inquiries (accessories such as strings, cables, picks, effect pedals, and amplifiers), redirecting customers to local partner stores.
 4. **Clean Architecture & Dual Presentation:** Providing an interactive terminal CLI (`main.py`) for developers and automated testing, alongside a WhatsApp-styled Web UI (`app.py`) for stakeholders.
 
@@ -42,7 +42,7 @@ This project delivers an autonomous, production-grade **AI Customer Service Agen
                 │   Database Engine (`src/db`) │                           │ Knowledge Engine (`src/know`)│
                 │ - In-Memory SQLite Store     │                           │ - Dynamic PDF Ingestion      │
                 │ - Parameterized Catalog/Order│                           │   (`políticas_da_loja.pdf`)  │
-                │   Queries (`data/*.csv`)     │                           │ - Structured Semantic Lookup │
+                │   Queries (`data/*.csv`)     │                           │ - Structured Policy Lookup   │
                 └──────────────────────────────┘                           └──────────────────────────────┘
 ```
 
@@ -50,55 +50,12 @@ This project delivers an autonomous, production-grade **AI Customer Service Agen
 
 ## 1. Instructions to Run the Project (Instruções para Rodar o Projeto)
 
-### 1.1 System Prerequisites & Python Installation
+### 1.1 Prerequisites
 
-This project requires **Python 3.11** or higher (tested across Python 3.11, 3.12, 3.13, and 3.14). If Python is not yet installed on your system, please follow the operating system instructions below:
-
-#### 🪟 Windows Installation Guide
-1. **Download:** Visit the official [Python Downloads for Windows](https://www.python.org/downloads/windows/) and download the latest stable installer (Python 3.11+).
-2. **Install (Crucial Step):** Run the downloaded `.exe` installer. On the very first screen, **check the box: `"Add python.exe to PATH"`** before clicking *"Install Now"*.
-3. **Verify:** Open **PowerShell** or **Command Prompt** and run:
-   ```powershell
-   python --version
-   pip --version
-   ```
-4. *(Optional PowerShell Policy):* If PowerShell displays an execution warning when activating `.venv`, run PowerShell as Administrator and execute:
-   ```powershell
-   Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-   ```
-
-#### 🍏 macOS Installation Guide
-1. **Option A — Homebrew (Recommended):**
-   Open Terminal and install Python 3.12:
-   ```bash
-   brew install python@3.12
-   ```
-2. **Option B — Official Universal Installer:**
-   Download the macOS 64-bit universal installer from [Python Downloads for macOS](https://www.python.org/downloads/macos/). Run the package and double-click `Install Certificates.command` in `/Applications/Python 3.x/` upon completion.
-3. **Verify:**
-   ```bash
-   python3 --version
-   pip3 --version
-   ```
-
-#### 🐧 Linux Installation Guide (Ubuntu / Debian / Fedora / Arch)
-1. **Ubuntu / Debian / Linux Mint:**
-   ```bash
-   sudo apt update
-   sudo apt install -y python3 python3-pip python3-venv
-   ```
-2. **Fedora / RHEL:**
-   ```bash
-   sudo dnf install -y python3 python3-pip
-   ```
-3. **Arch Linux / Manjaro:**
-   ```bash
-   sudo pacman -S python python-pip
-   ```
-4. **Verify:**
-   ```bash
-   python3 --version
-   ```
+This project requires **Python 3.11** or higher (developed and evaluated locally with Python 3.14 on macOS). If Python is not yet installed on your system:
+- **macOS:** Install via Homebrew (`brew install python@3.12`) or official installer from [python.org](https://www.python.org/downloads/macos/).
+- **Linux (Ubuntu/Debian):** `sudo apt update && sudo apt install -y python3 python3-pip python3-venv`
+- **Windows:** Download the latest installer from [python.org](https://www.python.org/downloads/windows/) and ensure **"Add python.exe to PATH"** is checked. If PowerShell blocks script execution, run `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser`.
 
 ---
 
@@ -235,53 +192,67 @@ python scripts/check_examples.py
 
 ## 2. Technical Decisions & Strategic Rationale (Justificativa das Decisões Técnicas)
 
-Following the evaluation matrix specified by Artefact, our technical decisions balance production readiness, conversational responsiveness, and architectural simplicity:
+Following the decision categories specified in the challenge brief, our technical choices balance conversational responsiveness, data integrity, and operational simplicity:
 
-| Decision Area (Artefact Rubric) | Guidance / Options | Chosen Implementation | Technical Justification & Rationale |
+| Decision Area (from the brief) | Guidance / Options | Chosen Implementation | Technical Justification & Rationale |
 | :--- | :--- | :--- | :--- |
-| **1. Framework & Agent Approach** | *RAG, function calling, ReAct, SQL agent, hybrid, etc.* | **Hybrid ReAct with Typed Tool-Calling on LangGraph (`StateGraph`)** | LangGraph is a widely adopted industry standard across the market and Artefact's primary stack. Cyclic graph execution with decoupled reasoning and execution nodes (`ToolNode`), conditional routing (`tools_condition`), and thread checkpointing avoids future architectural rewrites. |
-| **2. Model & Provider** | *Paid, free, local, or API models.* | **Google Gemini (`gemini-3.5-flash-lite`) via Google AI Studio API** | Ultra-low latency (~1.0s raw, ~4.5s full ReAct loop with tools), high accuracy on structured tool calling, and effortless onboarding for evaluators, colleagues, and beta testers using standard Google accounts with no credit card required. |
+| **1. Framework & Agent Approach** | *RAG, function calling, ReAct, SQL agent, hybrid, etc.* | **Hybrid ReAct with Typed Tool-Calling on LangGraph (`StateGraph`)** | Cyclic graph execution with decoupled reasoning and execution nodes (`ToolNode`), conditional routing (`tools_condition`), and thread checkpointing, avoiding future architectural rewrites. |
+| **2. Model & Provider** | *Paid, free, local, or API models.* | **Google Gemini (`gemini-3.5-flash-lite`) via Google AI Studio API** | Low latency (indicative local measurement: ~1.0s raw, ~4.5s multi-step ReAct loop with tools), reliable structured tool calling, and straightforward onboarding for reviewers and colleagues using standard Google accounts with no credit card required. |
 | **3. Interaction Interface** | *CLI, notebook, API, or simple UI — focus on correct functioning.* | **Dual Mode: Interactive CLI (Rich) + WhatsApp Web UI (Streamlit)** | Addresses both engineering and business stakeholders: instant CLI execution (`main.py`) with session export (`/export`) for automated verification, alongside a visual WhatsApp-styled UI (`app.py`) with musical equalizer animations. |
-| **4. Conversation History Persistence** | *Implement if it adds value to user experience.* | **Thread-Isolated Checkpointing via LangGraph `MemorySaver`** | Maintains clean conversation state indexed by `thread_id`. Supports session resets (`/reset`) and dialogue export. Upgrading to distributed multi-worker persistence (`PostgresSaver` or `RedisSaver`) in production requires only a single line of configuration. |
-| **5. Data Treatment & Retrieval** | *Perform data treatment as deemed necessary.* | **Relational In-Memory SQLite + Direct Native PDF Ingestion (`pypdf`)** | **Relational SQLite:** Adopts a true relational database paradigm with multi-table `JOINs` and parameterized queries, enabling seamless future migration to PostgreSQL while remaining lightweight with no local infrastructure setup.<br>**Business Rules:** 5% PIX discounts (§6.2) and installment limits (§3.1) are not present in raw CSVs; they are calculated deterministically in Python/SQL over catalog prices to prevent LLM arithmetic errors.<br>**Native PDF Ingestion:** The policy manual is read directly from `data/políticas_da_loja.pdf` without lossy intermediate vector chunking. Swapping the PDF file immediately updates knowledge without manual transcription. |
+| **4. Conversation History Persistence** | *Implement if it adds value to user experience.* | **Thread-Isolated Checkpointing via LangGraph `MemorySaver`** | Maintains clean conversation state indexed by `thread_id`. Supports session resets (`/reset`) and dialogue export. Upgrading to distributed multi-worker persistence (`PostgresSaver` or `RedisSaver`) in production is a localized change (checkpointer swap and connection configuration). |
+| **5. Data Treatment & Retrieval** | *Perform data treatment as deemed necessary.* | **Relational In-Memory SQLite + Direct PDF Policy Ingestion (`pypdf`)** | **Relational SQLite:** Adopts a true relational database schema with multi-table `JOINs` and parameterized queries, enabling seamless future migration to PostgreSQL while remaining lightweight with no local infrastructure setup.<br>**Business Rules:** 5% PIX discounts (§6.2) and installment limits (§3.1) are not present in raw CSVs; they are calculated deterministically in Python/SQL over catalog prices to prevent LLM arithmetic errors.<br>**Direct PDF Ingestion:** The 8-page manual (~1,680 words) is read from `data/políticas_da_loja.pdf` using `pypdf` and placed entirely into the prompt context (~2,200 tokens), with `consultar_politicas` available as a targeted lookup tool. Swapping the PDF immediately updates knowledge without manual transcription or chunking errors. |
 
 ---
 
 ### Deep Dive into Core Architectural Choices:
 
-1. **Why LangGraph & Hybrid ReAct (Framework & Agent Approach):**
-   LangGraph was selected because it is a **widely adopted industry standard across the entire market, including by Artefact itself**. While the initial prototype explored a manual while-loop with Google's native SDK (`google-genai`), migrating to **LangGraph** was a deliberate architectural decision:
-   - **Market & Artefact Standard:** LangGraph is the reference framework for enterprise-grade autonomous agents.
-   - **Future-Proofing Without Paradigm Shifts:** Investing in LangGraph upfront ensures that future project evolutions—such as human-in-the-loop approvals for refunds or specialized multi-agent subgraphs—will not demand a change of approach or an architectural rewrite; new capabilities are simply added as new nodes and edges.
-   - **Mitigating Vendor Lock-in:** Decoupled business logic from proprietary provider SDK types (`types.Content`), establishing standardized message schemas (`HumanMessage`, `AIMessage`, `ToolMessage`) compatible with any backend model.
-   - **Native Observability:** Seamless out-of-the-box integration with tracing frameworks (such as LangSmith) enables granular inspection of latency, token consumption, and tool execution states.
+#### 2.1 Agent Tools & Retrieval Routing (Data vs. Policies):
+The agent must know when to query operational data and when to consult store policies. We address this through a decoupled routing architecture:
+- **The 5 Agent Tools:**
+  1. `buscar_produtos(categoria, max_price, termo, apenas_disponiveis)`: Searches catalog items by category, maximum price budget, or unaccented text term. Returns product names, prices, active stock, precalculated 5% PIX prices, and card installment text.
+  2. `consultar_detalhes_produto(produto_id)`: Fetches comprehensive technical specifications (top wood, back/sides, neck, scale length, electronics, strings), stock quantity, and pricing for a single instrument.
+  3. `consultar_pedido(order_id, tracking_code, email, telefone)`: Looks up customer orders. Direct queries by tracking code (`BR...`) return carrier shipping status; queries by `order_id` require customer verification (email or phone) to protect personal data.
+  4. `consultar_politicas(topico)`: Targeted lookup tool returning verbatim text from the store policy manual matching a topic slug or keyword.
+  5. `registrar_reclamacao(cliente_nome, cliente_contato, motivo, pedido_id)`: Registers a formal customer complaint into the database, generating a sequential protocol (`REC-AAAAMMDD-NNNN`) and stating the official 24-business-hour SLA (§7.3).
 
-2. **Why Gemini 3.5 Flash-Lite & Google AI Studio (Model & Provider):**
-   - **Conversational Latency:** Customer service chatbots require fast response times to feel natural on messaging apps. Gemini 3.5 Flash-Lite delivers high reasoning capability with low response latency (~1.0s raw, ~4.5s full ReAct loop with tool calls), compared to 6–10s on larger frontier models.
-   - **Reliable Tool Calling:** Excels at accurate Pydantic/JSON schema adherence for database filters, IDs, and policy slugs without hallucinating arguments.
-   - **Frictionless Onboarding for Evaluators, Colleagues, and Beta Testers:** Because Google accounts and services are universally adopted, any teammate, reviewer, or beta tester can generate an API key in under 60 seconds on Google AI Studio without credit card registration or billing hurdles—eliminating friction during review and multi-developer collaboration.
-   - **Economic Production Scaling:** High free-tier quotas and cost-effective production token pricing make it viable for high-volume WhatsApp customer service.
+- **Data vs. Policies Routing Strategy:**
+  - **Policies in Context (Prompt + Tool Fallback):** The store manual comprises 8 pages (~1,680 words, ~2,200 tokens). Rather than building a vector store with chunking and embeddings, the full text of all unique policy sections is extracted via `pypdf` at startup and embedded directly into the system prompt via `get_store_policy_summary()`. The tool `consultar_politicas` provides an additional targeted retrieval path for focused questions. Because the entire manual fits into the model's context window, this eliminates chunk boundary truncations, cosine similarity retrieval errors, and embedding latency.
+  - **Operational Data via Tools Only:** Dynamic data (catalog pricing, stock levels, order delivery stages, complaint protocols) is never hardcoded in prompt instructions; the agent must invoke the database tools to retrieve up-to-date facts.
+  - **Deterministic Business Arithmetic:** Complex business logic—such as the 5% PIX discount on non-promotional items (§6.2), installment brackets (§3.1), and return eligibility windows (§4.1, §4.2, §8.1)—is calculated in Python/SQL code, eliminating arithmetic hallucinations.
 
-3. **Dual Interface Strategy (CLI + Streamlit Web UI):**
-   - **Terminal CLI (`main.py`):** Tailored for developers and automated workflows. Features Rich formatting, real-time status spinners, and a built-in `/export` command that saves conversations directly into Markdown files for automated auditing.
-   - **Streamlit Web UI (`app.py`):** Tailored for business presentations and user testing. Simulates a realistic WhatsApp web experience, complete with customer avatars, responsive chat bubbles, and an animated musical equalizer during model generation.
+#### 2.2 Framework Selection: LangGraph & Hybrid ReAct:
+LangGraph was selected because it provides a structured, cyclic graph execution model (`StateGraph`) for agentic workflows:
+- **Decoupled Architecture:** Clean separation between the reasoning node (`agent`), execution node (`ToolNode`), and conditional edge routing (`tools_condition`).
+- **Future-Proofing Without Paradigm Shifts:** Future business requirements—such as human-in-the-loop approvals for refunds or specialized multi-agent subgraphs—can be plugged directly into the existing graph as new nodes and edges without rewriting the core engine.
+- **Mitigating Vendor Lock-in:** Decoupled business logic from proprietary provider SDK types (`types.Content`), establishing standardized message schemas (`HumanMessage`, `AIMessage`, `ToolMessage`) compatible with any backend model.
+- **Native Observability:** Seamless out-of-the-box integration with tracing frameworks (such as LangSmith) enables granular inspection of latency, token consumption, and tool execution states.
 
-4. **Conversation History Persistence (LangGraph `MemorySaver`):**
-   - Replaced fragile, unindexed Python lists with LangGraph's structured `MemorySaver` checkpointing isolated by `thread_id`.
-   - In a production environment with horizontally scaled WhatsApp webhook workers, transitioning to persistent storage (such as `PostgresSaver` or `RedisSaver`) is a drop-in replacement requiring no changes to the agent workflow.
+#### 2.3 Model & Provider: Gemini 3.5 Flash-Lite via Google AI Studio:
+- **Conversational Latency:** Customer service chatbots require responsive interaction on messaging apps. In local testing, Gemini 3.5 Flash-Lite showed indicative response times of ~1.0s for raw text generation and ~4.5s for complete multi-step tool execution loops.
+- **Reliable Tool Calling:** Adheres accurately to Pydantic/JSON schemas for database filters, product IDs, and policy slugs without hallucinating arguments.
+- **Frictionless Onboarding for Evaluators and Colleagues:** Because Google accounts are universally adopted, any reviewer or collaborator can generate an API key in under 60 seconds on Google AI Studio without credit card registration or billing hurdles.
+- **Economic Production Scaling:** High free-tier quotas and cost-effective production token pricing make it viable for high-volume customer service.
 
-5. **Data Treatment & Retrieval Architecture (Relational SQLite + Direct Dynamic PDF):**
-   - **Relational Foundation with SQLite:** The operational CSVs are ingested into SQLite tables at startup. Choosing SQLite establishes a true relational database paradigm (structured schemas, relational `JOINs` across orders, customers, items, and promotions, and parameterized queries). This makes migrating to an enterprise relational engine (such as PostgreSQL) straightforward in the future, while offering immediate local execution with no server dependencies or container setup.
-   - **Deterministic Financial Calculations over Raw Data:** In the raw CSV data, only base prices (`price_brl`) and active discount percentages are stored; there are no precomputed PIX prices or installment breakdowns. Instead of asking the LLM to perform mental arithmetic on the fly, our data layer combines catalog prices with store policies (§3.1 and §6.2) in Python/SQL, passing exact precalculated fields (`pix_price` and `installment_text`) to the agent.
-   - **Direct PDF Ingestion Without Lossy Transformation:** The store policy manual (`data/políticas_da_loja.pdf`) is ingested directly in its native format rather than converted into intermediate text or vector chunks. Because it is a compact document (~5 pages), direct dynamic chapter extraction allows the system to remain agile: if the store updates its manual, simply replacing the PDF enables the system to deliver up-to-date answers immediately, eliminating manual transcription overhead and avoiding retrieval hallucinations common in vector chunking.
+#### 2.4 Dual Interface Strategy (CLI + Streamlit Web UI):
+- **Terminal CLI (`main.py`):** Tailored for developers and automated workflows. Features Rich formatting, real-time status spinners, and a built-in `/export` command that saves conversations directly into Markdown files for automated auditing.
+- **Streamlit Web UI (`app.py`):** Tailored for business presentations and user testing. Simulates a realistic WhatsApp web experience, complete with customer avatars, responsive chat bubbles, and an animated musical equalizer during model generation.
 
-6. **Prompt Strategy & Conversational Guardrails:**
-   The system prompt in `src/prompt.py` is engineered around WhatsApp conversational patterns:
-   - **Mobile-Friendly Readability:** Concise responses (2 to 3 short paragraphs) with bullet items (`•`) placed on separate lines for quick visual scanning on mobile screens.
-   - **Dynamic Temporal Context:** Injects the local store clock (`America/Campo_Grande`), enabling the agent to know whether the physical store is currently open, closed, or observing a national holiday (e.g., Finados).
-   - **Factual Grounding & Anti-Hallucination:** All prices, stock counts, and installment plans must come verbatim from tool responses; calculations are handled deterministically in code.
-   - **Firm Scope Boundaries:** Inquiries regarding accessories (strings, cables, picks, pedals, amplifiers) or general non-music topics are politely declined, redirecting customers to local partner shops.
-   - **LGPD Privacy Protection:** Access to customer order history requires authentication (Order ID + Customer Email or Phone), while allowing direct tracking code lookups per courier industry conventions.
+#### 2.5 Conversation History Persistence (LangGraph `MemorySaver`):
+- Replaced unindexed in-memory Python lists with LangGraph's structured `MemorySaver` checkpointing isolated by `thread_id`.
+- In a production environment with horizontally scaled WhatsApp webhook workers, transitioning to persistent storage (such as `PostgresSaver` or `RedisSaver`) is a localized change (checkpointer swap and connection configuration) requiring no changes to the agent graph.
+
+#### 2.6 Data Treatment & Retrieval Architecture (Relational SQLite + Direct Native PDF):
+- **Relational Foundation with SQLite:** The operational CSVs are ingested into SQLite tables at startup. Choosing SQLite establishes a true relational database paradigm (structured schemas, relational `JOINs` across orders, customers, items, and promotions, and parameterized queries). This makes migrating to an enterprise relational engine (such as PostgreSQL) straightforward in the future, while offering immediate local execution with no server dependencies or container setup.
+- **Deterministic Financial Calculations over Raw Data:** In the raw CSV data, only base prices (`price_brl`) and active discount percentages are stored; there are no precomputed PIX prices or installment breakdowns. Our data layer combines catalog prices with store policies (§3.1 and §6.2) in Python/SQL, passing exact precalculated fields (`pix_price` and `installment_text`) to the agent.
+- **Direct PDF Ingestion Without Lossy Transformation:** The store policy manual (`data/políticas_da_loja.pdf`) is an 8-page document (~1,680 words). Its text is extracted using `pypdf` at startup. Embedding the full summary directly into the prompt context (~2,200 tokens) provides complete normative grounding without the complexity, chunk boundary truncations, or retrieval misses of a vector database.
+
+#### 2.7 Prompt Strategy & Conversational Guardrails:
+The system prompt in `src/prompt.py` is engineered around WhatsApp conversational patterns:
+- **Mobile-Friendly Readability:** Concise responses (2 to 3 short paragraphs) with bullet items (`•`) placed on separate lines for quick visual scanning on mobile screens.
+- **Dynamic Temporal Context:** Injects the local store clock (`America/Campo_Grande`), enabling the agent to know whether the physical store is currently open, closed, or observing a national holiday.
+- **Factual Grounding & Anti-Hallucination:** All prices, stock counts, and installment plans must come verbatim from tool responses; calculations are handled deterministically in code.
+- **Firm Scope Boundaries:** Inquiries regarding accessories (strings, cables, picks, pedals, amplifiers) or general non-music topics are politely declined, redirecting customers to local partner shops.
+- **Customer Privacy Protection:** Order lookup requiring customer verification (Order ID + email or phone) is a project design decision inspired by LGPD data minimization principles, while manual §9 specifically covers marketing consent and deletion requests. Public tracking code lookups remain unauthenticated per courier industry conventions.
 
 ---
 
@@ -294,7 +265,7 @@ Following the evaluation matrix specified by Artefact, our technical decisions b
 4. **Deterministic Tokenized Search:** Catalog lookup uses unaccented SQLite token search. While resolving plurals and accents ("violao" $\rightarrow$ "violões"), it does not perform semantic embeddings for subjective, poetic customer descriptions (e.g., *"um violão com som aveludado e vintage"*).
 5. **Absence of Automated External Helpdesk Sync:** Customer complaints are recorded locally with an official protocol and 24-business-hour SLA (§7.3), but do not automatically emit webhook notifications or create Zendesk/Jira tickets.
 6. **Synchronous Process Execution:** CLI and Streamlit run synchronously within single-worker environments without Celery/Redis queue workers for massive concurrent loads.
-7. **Fixed Regional Calendar:** Implements standard store hours and the national holiday cited in policies (Finados §2), but lacks dynamic integration with local Campo Grande municipal holiday feeds.
+7. **Fixed Regional Calendar:** Evaluates Brazilian national holidays (such as Finados, Tiradentes, etc.) per the store closure policy (§2: "Domingos e Feriados: Fechado"), but lacks dynamic integration with local Campo Grande municipal holiday feeds.
 
 ---
 
@@ -303,7 +274,7 @@ Following the evaluation matrix specified by Artefact, our technical decisions b
    - Build a high-performance **FastAPI microservice** exposing standardized endpoints (`POST /v1/chat`, `POST /v1/feedback`, `GET /v1/health`).
    - Enable plug-and-play integration with the store's official e-commerce web storefront (embeddable chat widget) and messaging platforms (Telegram Bot API and WhatsApp via Meta Cloud API / Twilio).
 2. **Model Benchmarking, Cost Optimization & Fallback Redundancy:**
-   - Conduct systematic benchmarking across compact and cost-effective models (e.g., Gemini 3.5 Flash-Lite, Claude 3.5 Haiku, GPT-4o-mini, and open-source models via OpenRouter), evaluating the exact tradeoff between latency, token cost, and tool-calling accuracy.
+   - Conduct systematic benchmarking across compact and cost-effective models (e.g., Gemini 3.5 Flash-Lite alongside compact models from other providers via OpenRouter), evaluating the exact tradeoff between latency, token cost, and tool-calling accuracy.
    - Architect a dual-model resilience strategy (**Primary Model + Automatic Fallback**): the agent defaults to an ultra-fast, cost-effective model, automatically failing over to a secondary model (via OpenRouter or an extensible Provider Strategy interface) if rate limits (HTTP 429) or upstream outages (HTTP 503) occur.
 3. **Persistent Hybrid Storage:**
    - Attach a persistent SQLite or PostgreSQL storage layer (`ATTACH DATABASE 'data/runtime/emporio_runtime.db'` or PostgreSQL in container), keeping catalog queries fast in memory while persisting complaints and conversation history to disk.
@@ -327,8 +298,8 @@ As explicitly encouraged by Artefact:
 ### 4.1 Selected Tools & Specialized Roles:
 - **Primary AI Pair Programmer & Architecture Engine: Google Antigravity (powered by Gemini 3.8 Flash)**  
   Enhanced with the **Superpowers** engineering framework (leveraging structured `brainstorming`, `writing-plans`, and `systematic-debugging` workflows) to guide system design, conceptual transposition, and implementation.
-- **Simulated Artefact Assessor: Claude Opus (Anthropic)**  
-  Configured with the persona of a **Senior Applied AI Engineer at Artefact** evaluating this technical assessment. Equipped with all evaluation rubrics, store datasets, and company policies, Opus conducted adversarial reviews, challenged assumptions, and audited code quality against Artefact's actual grading criteria.
+- **Independent External Reviewer: Claude Opus (Anthropic)**  
+  Used as an independent external reviewer equipped with the challenge brief, policy manual, and datasets, auditing claims against the repository with concrete evidence under the persona of a Senior Applied AI Engineer evaluating the submission.
 
 ### 4.2 Engineering Methodology & Workflow:
 
@@ -346,14 +317,14 @@ As explicitly encouraged by Artefact:
    - **Agent Orchestration:** LangGraph.js state machines and channels $\rightarrow$ Python LangGraph `StateGraph` with prebuilt `ToolNode` and `MemorySaver`.
    - **Standard Library Leverage:** Leveraging Python's built-in `sqlite3` for lightweight, dependency-free relational querying and `pypdf` for native document ingestion, replacing external ORMs or complex node-gyp bindings.
 
-3. **Simulated Senior Evaluator Review Loop (Artefact Persona on Opus):**  
-   At key delivery milestones, commits and pull requests were submitted to Claude Opus acting as a Senior Applied AI Engineer at Artefact:
+3. **Simulated Senior Evaluator Review Loop:**  
+   At key delivery milestones, repository states were reviewed with Claude Opus acting as an independent external assessor:
    - Challenging edge cases in customer return windows (§4.1 vs. §4.2 vs. §8.1).
    - Verifying that PIX calculations faithfully obeyed the non-cumulative promotion rule (§6.2).
-   - Auditing customer privacy under LGPD (§9) when handling order tracking.
+   - Auditing customer privacy under LGPD principles when handling order tracking.
 
-4. **Test-Driven Verification (TDD):**  
-   Domain logic, business rules, and guardrails were anchored in unit tests from day one, maintaining a passing test suite (26 unit tests) throughout all architectural iterations.
+4. **Test-Driven Verification:**  
+   Domain logic, business rules, and guardrails were validated by tests written alongside each module, maintaining a passing test suite (26 unit tests) throughout all architectural iterations.
 
 5. **Transparent Audit Trail:**  
    A complete chronological record of AI collaboration, prompts, and design breakthroughs is preserved in [`docs/ai_workflow_log.md`](docs/ai_workflow_log.md).
@@ -390,7 +361,7 @@ During data audit and ingestion across the store CSV files and the policy manual
    - *Decision:* Discontinued products are reported as discontinued regardless of warehouse stock; active products with stock 0 are reported as temporarily out of stock.
 5. **Duplicate Customer Email (`bruno.martins@jmail.com`):**
    - *Discrepancy:* The same email is assigned to two distinct customer IDs (11 and 43).
-   - *Decision:* Per LGPD (§9), `consultar_pedido` requires `order_id` authenticated with email or phone, preventing ambiguous customer record lookups.
+   - *Decision:* As a design decision inspired by LGPD access control principles (while manual §9 specifically covers marketing consent and deletion requests), `consultar_pedido` requires `order_id` authenticated with customer email or phone, preventing ambiguous customer record lookups.
 6. **PIX Payment in Historical Orders Without 5% Discount:**
    - *Discrepancy:* Some historical orders marked with payment method `pix` do not reflect the 5% cash discount in the `total_amount` column.
    - *Decision:* Historical transactions are reported as recorded. For active product inquiries, the 5% PIX price is calculated dynamically in code for non-promotional items.
@@ -398,10 +369,10 @@ During data audit and ingestion across the store CSV files and the policy manual
    - *Discrepancy:* `promotions.csv` has duplicate entries for products 93, 96, and 99. In the dataset, all duplicate rows have `is_active=0`, with only 4 active promotions overall (products 90, 94, 121, 127).
    - *Decision:* The database query filters `pr.is_active = 1`, ensuring only currently active discounts are applied to catalog pricing.
 8. **Woodwinds and Orchestral Strings (Manual §1 vs. Sample Dataset):**
-   - *Discrepancy:* Manual §1 states that the store catalog includes woodwinds and orchestral strings ("mais de 300 modelos entre guitarras, baixos, violões, baterias, teclados, instrumentos de sopro, cordas orquestrais e ukuleles"). However, the sample `products.csv` dataset provided for the challenge contains SKUs only for 5 categories (no products in categories 6, 7, or 8).
+   - *Discrepancy:* Manual §1 states that the store catalog includes woodwinds and orchestral strings ("mais de 300 modelos entre guitarras, baixos, violões, baterias, teclados, instrumentos de sopro, cordas orquestrais e ukuleles"). However, the sample `products.csv` dataset provided for the challenge contains SKUs for 6 categories (1, 2, 3, 4, 5, and 9; with categories 6, 7, and 8 absent).
    - *Decision:* The agent clarifies that while the physical store works with these instruments, items in those categories are currently not available in the online catalog, inviting the customer to contact the store directly.
 9. **Dual Store Phone Numbers:**
-   - *Discrepancy:* Manual §1.2 lists `(67) 3341-4444` as the general store phone, while opening of §7.1 lists `(67) 3321-4500` as the dedicated WhatsApp customer service line.
+   - *Discrepancy:* Manual §1.2 lists `(67) 3341-4444` on the store header as "Telefone / WhatsApp", while the intro of §7 lists `(67) 3321-4500` as the dedicated WhatsApp customer service line.
    - *Decision:* Both numbers are preserved and provided in their respective contexts (general contact vs. returns/complaints).
 10. **Installment Calculation Specificity:**
     - *Discrepancy:* Summary table mentions "minimum R$ 100 per installment", but §3.1 details gradual brackets: up to 3x without minimum installment (purchases below R$ 50 do not allow installments); 4–6x with minimum R$ 80; 7–12x with minimum R$ 100.
@@ -433,7 +404,7 @@ music-emporium/
 │   ├── calendar_utils.py                # Brazilian national holidays & store hours engine
 │   ├── config.py                        # Pydantic settings & environment validation
 │   ├── database.py                      # SQLite in-memory store & parameterized queries
-│   ├── knowledge.py                     # Direct PDF policy ingestion (pypdf) & structured semantic engine
+│   ├── knowledge.py                     # Direct PDF policy ingestion (pypdf) & structured policy lookup
 │   ├── prompt.py                        # System prompt with musical persona & guardrails
 │   ├── tools.py                         # Typed agent tool declarations
 │   └── agent.py                         # Decoupled MusicStoreAgent engine
