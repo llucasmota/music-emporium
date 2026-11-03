@@ -235,34 +235,53 @@ python scripts/check_examples.py
 
 ## 2. Technical Decisions & Strategic Rationale (Justificativa das Decisões Técnicas)
 
-| Architectural Decision | Chosen Implementation | Justification & Rationale |
-| :--- | :--- | :--- |
-| **Language** | **Python 3.11+** | Required by Artefact. Implemented with modern static typing, Pydantic configuration schemas, and clean packaging. |
-| **LLM Provider & Model** | **Google Gemini (`gemini-3.5-flash-lite`)** via `langchain-google-genai` | Ultra-low latency (~1.0s raw, ~4.5s full LangGraph ReAct loop with tools), generous free-tier throughput, high accuracy on tool arguments, and cost-effective production scaling. |
-| **Agent Orchestration** | **LangGraph StateGraph (`langgraph`)** | Directly aligns with Artefact's core stack. StateGraph with `ToolNode` to isolate SQLite and policy tools, conditional routing via `tools_condition`, and thread checkpointing using `MemorySaver`. |
-| **Data Layer** | **SQLite In-Memory (`sqlite3` built-in)** | Avoids external database infrastructure and pandas overhead; sub-millisecond startup ingestion; supports relational JOINs across customers, orders, items, and promotions; parameterized queries eliminate SQL injection risks. |
-| **Store Policies Ingestion** | **Direct PDF Ingestion (`pypdf`) with Dynamic Chapter Discovery** | Directly ingests `data/políticas_da_loja.pdf` at startup. Automatically discovers outline bookmarks and numbered chapters, creating topic slugs dynamically without hardcoded section lists. Completely avoids transcription drift while serving lookups in memory in sub-millisecond time. |
-| **Interface Strategy** | **Dual Mode: CLI (Rich) + Web UI (Streamlit)** | Solves both evaluation and product needs: developer-friendly instant CLI execution (`main.py`) with `/export` command, alongside a visual WhatsApp-like experience (`app.py`) for non-technical business stakeholders. |
+Following the evaluation matrix specified by Artefact, our technical decisions balance production readiness, conversational responsiveness, and architectural simplicity:
+
+| Decision Area (Artefact Rubric) | Guidance / Options | Chosen Implementation | Technical Justification & Rationale |
+| :--- | :--- | :--- | :--- |
+| **1. Framework & Agent Approach** | *RAG, function calling, ReAct, SQL agent, hybrid, etc.* | **Hybrid ReAct with Typed Tool-Calling on LangGraph (`StateGraph`)** | LangGraph is a widely adopted industry standard across the market and Artefact's primary stack. Cyclic graph execution with decoupled reasoning and execution nodes (`ToolNode`), conditional routing (`tools_condition`), and thread checkpointing avoids future architectural rewrites. |
+| **2. Model & Provider** | *Paid, free, local, or API models.* | **Google Gemini (`gemini-3.5-flash-lite`) via Google AI Studio API** | Ultra-low latency (~1.0s raw, ~4.5s full ReAct loop with tools), high accuracy on structured tool calling, and effortless onboarding for evaluators, colleagues, and beta testers using standard Google accounts with no credit card required. |
+| **3. Interaction Interface** | *CLI, notebook, API, or simple UI — focus on correct functioning.* | **Dual Mode: Interactive CLI (Rich) + WhatsApp Web UI (Streamlit)** | Addresses both engineering and business stakeholders: instant CLI execution (`main.py`) with session export (`/export`) for automated verification, alongside a visual WhatsApp-styled UI (`app.py`) with musical equalizer animations. |
+| **4. Conversation History Persistence** | *Implement if it adds value to user experience.* | **Thread-Isolated Checkpointing via LangGraph `MemorySaver`** | Maintains clean conversation state indexed by `thread_id`. Supports session resets (`/reset`) and dialogue export. Upgrading to distributed multi-worker persistence (`PostgresSaver` or `RedisSaver`) in production requires only a single line of configuration. |
+| **5. Data Treatment & Retrieval** | *Perform data treatment as deemed necessary.* | **Relational In-Memory SQLite + Direct Native PDF Ingestion (`pypdf`)** | **Relational SQLite:** Adopts a true relational database paradigm with multi-table `JOINs` and parameterized queries, enabling seamless future migration to PostgreSQL while remaining lightweight with no local infrastructure setup.<br>**Business Rules:** 5% PIX discounts (§6.2) and installment limits (§3.1) are not present in raw CSVs; they are calculated deterministically in Python/SQL over catalog prices to prevent LLM arithmetic errors.<br>**Native PDF Ingestion:** The policy manual is read directly from `data/políticas_da_loja.pdf` without lossy intermediate vector chunking. Swapping the PDF file immediately updates knowledge without manual transcription. |
+
+---
 
 ### Deep Dive into Core Architectural Choices:
 
-1. **Why LangGraph over Simple Scripts or Chains:**
-   LangGraph models the agent as a cyclic directed state graph (`StateGraph`), providing state persistence per thread, clean separation between reasoning steps and tool execution (`ToolNode`), and native support for ReAct execution loops. If future requirements add human-in-the-loop approvals, LangGraph supports breakpoints out of the box.
+1. **Why LangGraph & Hybrid ReAct (Framework & Agent Approach):**
+   LangGraph was selected because it is a **widely adopted industry standard across the entire market, including by Artefact itself**. While the initial prototype explored a manual while-loop with Google's native SDK (`google-genai`), migrating to **LangGraph** was a deliberate architectural decision:
+   - **Market & Artefact Standard:** LangGraph is the reference framework for enterprise-grade autonomous agents.
+   - **Future-Proofing Without Paradigm Shifts:** Investing in LangGraph upfront ensures that future project evolutions—such as human-in-the-loop approvals for refunds or specialized multi-agent subgraphs—will not demand a change of approach or an architectural rewrite; new capabilities are simply added as new nodes and edges.
+   - **Mitigating Vendor Lock-in:** Decoupled business logic from proprietary provider SDK types (`types.Content`), establishing standardized message schemas (`HumanMessage`, `AIMessage`, `ToolMessage`) compatible with any backend model.
+   - **Native Observability:** Seamless out-of-the-box integration with tracing frameworks (such as LangSmith) enables granular inspection of latency, token consumption, and tool execution states.
 
-2. **Why Gemini 3.5 Flash-Lite:**
-   Customer service chatbots require fast response times to feel conversational. Gemini 3.5 Flash-Lite delivers high reasoning performance with low response latency, excels at structured tool calling with Pydantic schemas, and is accessible free of charge through Google AI Studio.
+2. **Why Gemini 3.5 Flash-Lite & Google AI Studio (Model & Provider):**
+   - **Conversational Latency:** Customer service chatbots require fast response times to feel natural on messaging apps. Gemini 3.5 Flash-Lite delivers high reasoning capability with low response latency (~1.0s raw, ~4.5s full ReAct loop with tool calls), compared to 6–10s on larger frontier models.
+   - **Reliable Tool Calling:** Excels at accurate Pydantic/JSON schema adherence for database filters, IDs, and policy slugs without hallucinating arguments.
+   - **Frictionless Onboarding for Evaluators, Colleagues, and Beta Testers:** Because Google accounts and services are universally adopted, any teammate, reviewer, or beta tester can generate an API key in under 60 seconds on Google AI Studio without credit card registration or billing hurdles—eliminating friction during review and multi-developer collaboration.
+   - **Economic Production Scaling:** High free-tier quotas and cost-effective production token pricing make it viable for high-volume WhatsApp customer service.
 
-3. **Retrieval Architecture: Relational In-Memory SQLite + Dynamic PDF Ingestion:**
-   Instead of setting up an external database or vector store for structured tabular data, SQLite loads the store CSVs into an in-memory database at startup. Complex queries (e.g. order items, customer details, and discount rates) are executed through parameterized SQL joins.
-   For store policies, `src/knowledge.py` directly ingests the official PDF (`data/políticas_da_loja.pdf`), extracting chapters from the document outline and serving them through the `consultar_politicas` tool.
+3. **Dual Interface Strategy (CLI + Streamlit Web UI):**
+   - **Terminal CLI (`main.py`):** Tailored for developers and automated workflows. Features Rich formatting, real-time status spinners, and a built-in `/export` command that saves conversations directly into Markdown files for automated auditing.
+   - **Streamlit Web UI (`app.py`):** Tailored for business presentations and user testing. Simulates a realistic WhatsApp web experience, complete with customer avatars, responsive chat bubbles, and an animated musical equalizer during model generation.
 
-4. **Prompt Strategy & Conversational Guardrails:**
+4. **Conversation History Persistence (LangGraph `MemorySaver`):**
+   - Replaced fragile, unindexed Python lists with LangGraph's structured `MemorySaver` checkpointing isolated by `thread_id`.
+   - In a production environment with horizontally scaled WhatsApp webhook workers, transitioning to persistent storage (such as `PostgresSaver` or `RedisSaver`) is a drop-in replacement requiring no changes to the agent workflow.
+
+5. **Data Treatment & Retrieval Architecture (Relational SQLite + Direct Dynamic PDF):**
+   - **Relational Foundation with SQLite:** The operational CSVs are ingested into SQLite tables at startup. Choosing SQLite establishes a true relational database paradigm (structured schemas, relational `JOINs` across orders, customers, items, and promotions, and parameterized queries). This makes migrating to an enterprise relational engine (such as PostgreSQL) straightforward in the future, while offering immediate local execution with no server dependencies or container setup.
+   - **Deterministic Financial Calculations over Raw Data:** In the raw CSV data, only base prices (`price_brl`) and active discount percentages are stored; there are no precomputed PIX prices or installment breakdowns. Instead of asking the LLM to perform mental arithmetic on the fly, our data layer combines catalog prices with store policies (§3.1 and §6.2) in Python/SQL, passing exact precalculated fields (`pix_price` and `installment_text`) to the agent.
+   - **Direct PDF Ingestion Without Lossy Transformation:** The store policy manual (`data/políticas_da_loja.pdf`) is ingested directly in its native format rather than converted into intermediate text or vector chunks. Because it is a compact document (~5 pages), direct dynamic chapter extraction allows the system to remain agile: if the store updates its manual, simply replacing the PDF enables the system to deliver up-to-date answers immediately, eliminating manual transcription overhead and avoiding retrieval hallucinations common in vector chunking.
+
+6. **Prompt Strategy & Conversational Guardrails:**
    The system prompt in `src/prompt.py` is engineered around WhatsApp conversational patterns:
-   - Short messages (2 to 3 concise paragraphs) optimized for mobile screens.
-   - Bullet items (`•`) placed on separate lines for quick visual scanning.
-   - Dynamic time injection (`America/Campo_Grande`) informing current store operating status.
-   - Anti-hallucination constraints: prices, stock, and installment terms are copied directly from tool responses.
-   - Defined scope boundaries: accessory inquiries (strings, picks, cables) and general knowledge questions are politely declined and redirected.
+   - **Mobile-Friendly Readability:** Concise responses (2 to 3 short paragraphs) with bullet items (`•`) placed on separate lines for quick visual scanning on mobile screens.
+   - **Dynamic Temporal Context:** Injects the local store clock (`America/Campo_Grande`), enabling the agent to know whether the physical store is currently open, closed, or observing a national holiday (e.g., Finados).
+   - **Factual Grounding & Anti-Hallucination:** All prices, stock counts, and installment plans must come verbatim from tool responses; calculations are handled deterministically in code.
+   - **Firm Scope Boundaries:** Inquiries regarding accessories (strings, cables, picks, pedals, amplifiers) or general non-music topics are politely declined, redirecting customers to local partner shops.
+   - **LGPD Privacy Protection:** Access to customer order history requires authentication (Order ID + Customer Email or Phone), while allowing direct tracking code lookups per courier industry conventions.
 
 ---
 
