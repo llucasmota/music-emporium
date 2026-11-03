@@ -287,19 +287,35 @@ Following the evaluation matrix specified by Artefact, our technical decisions b
 
 ## 3. Known Limitations & Production Roadmap ("O Que Faria com Mais Tempo")
 
-### Current Known Limitations:
-1. **In-Memory Checkpointing (`MemorySaver`):** Conversation state is tracked in RAM per session. Restarting the process resets thread history (ideal for stateless CLI/evaluations, but requires Redis or PostgreSQL checkpointers in distributed deployments).
-2. **Deterministic Tokenized Search:** Catalog lookup uses unaccented SQLite token search. While resolving plurals and accents ("violao" $\rightarrow$ "violões"), it does not perform semantic embeddings for vague colloquial descriptions.
-3. **Absence of Automated External Helpdesk Sync:** Customer complaints are recorded locally in the in-memory complaints table with sequential protocol (`REC-AAAAMMDD-NNNN`), but do not automatically emit webhook notifications or create Zendesk/Jira tickets.
-4. **Synchronous Process Execution:** CLI and Streamlit run synchronously within single-worker environments without Celery/Redis queue workers.
+### 3.1 Current Known Limitations:
+1. **In-Memory Checkpointing (`MemorySaver`):** Conversation state is tracked in RAM per process. Restarting the process resets thread history (ideal for isolated evaluation and testing, but requires distributed storage in horizontally scaled environments).
+2. **In-Memory Complaint Storage:** Formal complaint tickets (`REC-AAAAMMDD-NNNN`) are recorded in an in-memory SQLite table during runtime. Restarting the process resets newly registered tickets.
+3. **Absence of a Decoupled REST/WebSocket API:** The system currently runs via standalone interfaces (`main.py` CLI and `app.py` Streamlit). There is no headless HTTP API endpoint (e.g., FastAPI) to receive external webhooks or serve decoupled third-party frontends.
+4. **Deterministic Tokenized Search:** Catalog lookup uses unaccented SQLite token search. While resolving plurals and accents ("violao" $\rightarrow$ "violões"), it does not perform semantic embeddings for subjective, poetic customer descriptions (e.g., *"um violão com som aveludado e vintage"*).
+5. **Absence of Automated External Helpdesk Sync:** Customer complaints are recorded locally with an official protocol and 24-business-hour SLA (§7.3), but do not automatically emit webhook notifications or create Zendesk/Jira tickets.
+6. **Synchronous Process Execution:** CLI and Streamlit run synchronously within single-worker environments without Celery/Redis queue workers for massive concurrent loads.
+7. **Fixed Regional Calendar:** Implements standard store hours and the national holiday cited in policies (Finados §2), but lacks dynamic integration with local Campo Grande municipal holiday feeds.
 
-### Production Roadmap ("What I Would Do With More Time"):
-1. **Persistent Complaint Storage:** SQLite file attached to the connection (`ATTACH DATABASE 'data/runtime/emporio_runtime.db' AS rt`), maintaining the operational catalog loaded in memory while persisting complaints to disk. Complaint lifecycle (`open` $\rightarrow$ `reviewing` $\rightarrow$ `resolved`) managed by store staff (no agent tool modifies complaint status). SLA calculation dynamically computing 24 business hours based on the store operating calendar (§2).
-2. **Complaint Tracking Tool (`consultar_reclamacao`):** Customer-facing tool allowing status check via protocol + customer email verification.
-3. **Helpdesk & CRM Integration:** Automated webhook/email notifications dispatched to the customer service team or direct integration with ticketing systems (Zendesk, Jira Service Management) upon complaint creation.
-4. **Turn-Level Behavioral Evaluation:** Comprehensive eval harness evaluating individual dialogue turns, recording raw model payloads and tool calls, integrated into CI/CD pipelines.
-5. **Pagination & Catalog Depth Notices:** Proactively informing the customer when additional items exist beyond the displayed top results (`total_count > len(items)`).
-6. **Configurable Holiday Calendar:** Integration of municipal Campo Grande holidays (e.g., August 26) and configurable regional calendar feeds.
+---
+
+### 3.2 Production Roadmap ("What I Would Do With More Time"):
+1. **Decoupled REST API & Omnichannel Expansion (FastAPI):**
+   - Build a high-performance **FastAPI microservice** exposing standardized endpoints (`POST /v1/chat`, `POST /v1/feedback`, `GET /v1/health`).
+   - Enable plug-and-play integration with the store's official e-commerce web storefront (embeddable chat widget) and messaging platforms (Telegram Bot API and WhatsApp via Meta Cloud API / Twilio).
+2. **Model Benchmarking, Cost Optimization & Fallback Redundancy:**
+   - Conduct systematic benchmarking across compact and cost-effective models (e.g., Gemini 3.5 Flash-Lite, Claude 3.5 Haiku, GPT-4o-mini, and open-source models via OpenRouter), evaluating the exact tradeoff between latency, token cost, and tool-calling accuracy.
+   - Architect a dual-model resilience strategy (**Primary Model + Automatic Fallback**): the agent defaults to an ultra-fast, cost-effective model, automatically failing over to a secondary model (via OpenRouter or an extensible Provider Strategy interface) if rate limits (HTTP 429) or upstream outages (HTTP 503) occur.
+3. **Persistent Hybrid Storage:**
+   - Attach a persistent SQLite or PostgreSQL storage layer (`ATTACH DATABASE 'data/runtime/emporio_runtime.db'` or PostgreSQL in container), keeping catalog queries fast in memory while persisting complaints and conversation history to disk.
+   - Maintain complaint lifecycle management (`open` $\rightarrow$ `reviewing` $\rightarrow$ `resolved`) through administrative tools without agent interference.
+4. **Complaint Tracking Tool (`consultar_reclamacao`):**
+   - Provide a customer-facing tool allowing customers to check ticket status on subsequent days by providing their protocol (`REC-AAAAMMDD-NNNN`) and registered email/phone.
+5. **Helpdesk & CRM Integration:**
+   - Dispatch automated asynchronous webhooks to ticketing platforms (Zendesk, Jira Service Management) upon complaint creation, dynamically calculating business-hour SLAs based on the store operating calendar.
+6. **Hybrid Catalog Retrieval (SQL Filters + Dense Semantic Embeddings):**
+   - Combine exact relational SQL filters (price caps, categories, stock availability) with lightweight semantic embeddings on product descriptions to understand subjective musical nuances.
+7. **Continuous Turn-Level Evaluation in CI/CD:**
+   - Implement an automated behavioral evaluation harness (using tools like LangSmith or DeepEval) to test tone consistency, guardrail integrity, and tool-call precision on every pull request.
 
 ---
 
