@@ -4,7 +4,7 @@
 
 **Goal:** Build a production-grade, conversational AI customer service agent in Python for "Empório da Música", featuring structured data queries via SQLite in-memory, deterministic policy retrieval, dual presentation layers (Interactive Rich CLI + Streamlit Web UI), and musical empathetic persona with graceful degradation.
 
-**Architecture:** Clean Architecture separating presentation layers (`main.py` CLI and `app.py` Web UI) from the decoupled core engine (`MusicStoreAgent` in `src/agent.py`). The core orchestrates Gemini 2.5 Flash with a native tool-calling loop, accessing operational tabular data through parameterized SQLite queries (`src/database.py`) and store policies via structured in-context retrieval (`src/knowledge.py`).
+**Architecture:** Clean Architecture separating presentation layers (`main.py` CLI and `app.py` Web UI) from the decoupled core engine (`MusicStoreAgent` in `src/agent.py`). The core orchestrates Gemini 3.5 Flash Lite with a native tool-calling loop, accessing operational tabular data through parameterized SQLite queries (`src/database.py`) and store policies via structured in-context retrieval (`src/knowledge.py`).
 
 **Tech Stack:** Python 3.11+, `google-genai` (official Google SDK), `sqlite3` (built-in standard library), `pydantic`, `rich` (CLI terminal styling), `streamlit` (Web UI), `pypdf` (PDF extraction), `pytest` (automated testing).
 
@@ -47,7 +47,7 @@ def test_settings_load_defaults(monkeypatch):
     settings = Settings()
     assert settings.gemini_api_key == "test-api-key-12345"
     assert settings.debug_mode is False
-    assert settings.model_name == "gemini-2.5-flash"
+    assert "flash" in settings.model_name
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -116,7 +116,7 @@ from pydantic import Field
 class Settings(BaseSettings):
     gemini_api_key: str = Field(default="", env="GEMINI_API_KEY")
     debug_mode: bool = Field(default=False, env="DEBUG_MODE")
-    model_name: str = "gemini-2.5-flash"
+    model_name: str = "gemini-3.5-flash-lite"
     
     # Project paths
     project_root: Path = Path(__file__).resolve().parent.parent
@@ -1275,7 +1275,7 @@ git commit -m "docs(examples): add 5 real interaction logs covering catalog, ord
 
 **Requirements to Cover:**
 1. Instructions to run (CLI and Streamlit, environment configuration).
-2. Technical justifications (Gemini 2.5 Flash, Native Tool-Calling Loop, In-Memory SQLite, In-Context Policies).
+2. Technical justifications (Gemini 3.5 Flash Lite, Native Tool-Calling Loop, In-Memory SQLite, In-Context Policies).
 3. AI coding assistant workflow section (explaining Antigravity pair-programming, TypeScript to Python acceleration, and test-driven development).
 4. Known limitations and what would be built with more time (OpenRouter multi-model interface, persistent vector store for large catalogs, WhatsApp webhook integration).
 
