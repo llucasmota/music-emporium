@@ -100,11 +100,7 @@ def _find_data_file(data_dir: Path, pattern: str) -> Optional[Path]:
 def init_database(data_dir: Optional[Path] = None) -> sqlite3.Connection:
     """Initializes in-memory SQLite database and populates it from the CSV files."""
     if data_dir is None:
-        data_dir = settings.project_root / "data"
-        if not data_dir.exists() or not list(data_dir.glob("*.csv")):
-            alt_dir = settings.project_root / "Desafio Técnico AI Engineer 2026" / "data"
-            if alt_dir.exists():
-                data_dir = alt_dir
+        data_dir = settings.data_dir
 
     conn = sqlite3.connect(":memory:", check_same_thread=False)
     conn.row_factory = sqlite3.Row

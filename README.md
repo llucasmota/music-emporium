@@ -326,9 +326,6 @@ As explicitly encouraged by Artefact:
 4. **Test-Driven Verification:**  
    Domain logic, business rules, and guardrails were validated by tests written alongside each module, maintaining a passing test suite (26 unit tests) throughout all architectural iterations.
 
-5. **Transparent Audit Trail:**  
-   A complete chronological record of AI collaboration, prompts, and design breakthroughs is preserved in [`docs/ai_workflow_log.md`](docs/ai_workflow_log.md).
-
 ---
 
 ## 5. Example Interactions & Non-Trivial Scenarios (Exemplos de Interação)
@@ -419,7 +416,6 @@ music-emporium/
 │   ├── test_tools.py
 │   └── test_agent.py
 ├── docs/
-│   ├── ai_workflow_log.md               # Detailed AI collaboration log
 │   └── superpowers/                     # Architecture specs & implementation plans
 ├── scripts/
 │   ├── check_examples.py                # Automated verifier for example files
