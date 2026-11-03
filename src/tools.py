@@ -66,7 +66,7 @@ def create_langchain_tools(db_conn: sqlite3.Connection) -> List[Any]:
         codigo_rastreio: Optional[str] = None,
         termo_cliente: Optional[str] = None
     ) -> Dict[str, Any]:
-        """Consulta o status atual, código de rastreamento e itens de um pedido de cliente com validação de privacidade LGPD (§9).
+        """Consulta o status atual, código de rastreamento e itens de um pedido de cliente com validação de privacidade inspirada na LGPD.
         
         Args:
             numero_pedido: O ID numérico do pedido (ex: 4, 20).
