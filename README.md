@@ -321,15 +321,42 @@ Following the evaluation matrix specified by Artefact, our technical decisions b
 
 ## 4. Use of AI Coding Assistants & Engineering Workflow (Uso de Assistentes de Código)
 
-As encouraged by Artefact:
+As explicitly encouraged by Artefact:
 > *"Uso de assistentes de código: caso faça uso de algum recurso de IA (Copilot, Claude, Cursor, etc.), explique qual a escolhida e como utilizou. Queremos entender o seu workflow. A depender de como a ferramenta tenha sido explorada, isso pode ser visto como um ponto positivo e não irá prejudicar a sua avaliação."*
 
-### The Workflow:
-- **Pair Programming Paradigm:** As an engineer with a strong background in **TypeScript, Node.js, and LangGraph.js**, I leveraged **Antigravity (powered by Gemini 3.8)** as a Senior Engineering Coach & Pair Programmer.
-- **Conceptual Transposition:** Rather than writing code blindly, the AI assisted in transposing mature architectural patterns from the TypeScript ecosystem (e.g., Zod schemas $\rightarrow$ Pydantic models; LangGraph.js state machines $\rightarrow$ LangGraph Python StateGraph; in-memory stores $\rightarrow$ native `sqlite3`).
-- **External Multi-Perspective Review:** In addition to active pair programming, an independent external evaluator (Claude) was employed to review repo commits, running adversarial checks against company policies, data edges, and manual rules.
-- **Test-Driven Specification & Comprehensive Automated Verification:** Test contracts and edge cases (pricing rules, privacy policies, catalog constraints) were designed upfront during the initial architectural specification phase. Tests were implemented alongside core domain modules, maintaining a consistently passing test suite (26 unit tests) across architectural iterations.
-- **Comprehensive Workflow Log:** A dedicated log is tracked at [`docs/ai_workflow_log.md`](docs/ai_workflow_log.md).
+### 4.1 Selected Tools & Specialized Roles:
+- **Primary AI Pair Programmer & Architecture Engine: Google Antigravity (powered by Gemini 3.8 Flash)**  
+  Enhanced with the **Superpowers** engineering framework (leveraging structured `brainstorming`, `writing-plans`, and `systematic-debugging` workflows) to guide system design, conceptual transposition, and implementation.
+- **Simulated Artefact Assessor: Claude Opus (Anthropic)**  
+  Configured with the persona of a **Senior Applied AI Engineer at Artefact** evaluating this technical assessment. Equipped with all evaluation rubrics, store datasets, and company policies, Opus conducted adversarial reviews, challenged assumptions, and audited code quality against Artefact's actual grading criteria.
+
+### 4.2 Engineering Methodology & Workflow:
+
+1. **Multi-Input Intake & Superpowers Brainstorming:**  
+   Before writing application code, all project materials were consolidated and cross-referenced in an exhaustive architectural brainstorming phase:
+   - The official instruction email from Artefact.
+   - The technical challenge specification guide (`desafio_tecnico_ai_eng_artefact.pdf`) with evaluation criteria and decisions matrix.
+   - The store policy manual (`data/políticas_da_loja.pdf`).
+   - The 6 operational CSV datasets (`categories`, `customers`, `products`, `orders`, `order_items`, `promotions`).  
+   This structured intake produced a formal architectural specification and a phased implementation plan, identifying data inconsistencies, price divergences, and business edge cases upfront.
+
+2. **Conceptual Transposition (TypeScript / Node.js $\rightarrow$ Idiomatic Python):**  
+   As an engineer with primary fluency and production experience in **TypeScript, Node.js, and LangGraph.js**, I utilized Antigravity as an active pair programmer to transpose proven software engineering patterns into idiomatic Python 3.11+:
+   - **Type Safety & Data Contracts:** TypeScript interfaces and Zod schemas $\rightarrow$ Pydantic v2 settings, typed tool schemas, and static type hints.
+   - **Agent Orchestration:** LangGraph.js state machines and channels $\rightarrow$ Python LangGraph `StateGraph` with prebuilt `ToolNode` and `MemorySaver`.
+   - **Standard Library Leverage:** Leveraging Python's built-in `sqlite3` for lightweight, dependency-free relational querying and `pypdf` for native document ingestion, replacing external ORMs or complex node-gyp bindings.
+
+3. **Simulated Senior Evaluator Review Loop (Artefact Persona on Opus):**  
+   At key delivery milestones, commits and pull requests were submitted to Claude Opus acting as a Senior Applied AI Engineer at Artefact:
+   - Challenging edge cases in customer return windows (§4.1 vs. §4.2 vs. §8.1).
+   - Verifying that PIX calculations faithfully obeyed the non-cumulative promotion rule (§6.2).
+   - Auditing customer privacy under LGPD (§9) when handling order tracking.
+
+4. **Test-Driven Verification (TDD):**  
+   Domain logic, business rules, and guardrails were anchored in unit tests from day one, maintaining a passing test suite (26 unit tests) throughout all architectural iterations.
+
+5. **Transparent Audit Trail:**  
+   A complete chronological record of AI collaboration, prompts, and design breakthroughs is preserved in [`docs/ai_workflow_log.md`](docs/ai_workflow_log.md).
 
 ---
 
